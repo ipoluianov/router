@@ -9,10 +9,17 @@ import (
 
 func main() {
 	cl := suisdk.NewClient(suisdk.TESTNET_URL)
-	resp, err := cl.GetTotalSupply("0x0688d228d71ac725d9f308fa6be32d014df2a6756394bf950783c603723ada55::snt::SNT")
-	bs, _ := json.MarshalIndent(resp, "", "  ")
-	if err != nil {
-		panic(err)
-	}
+
+	var p suisdk.TransactionBlockResponseOptions
+	p.ShowInput = true
+	p.ShowRawInput = true
+	p.ShowEffects = false
+	p.ShowEvents = false
+	p.ShowObjectChanges = false
+	p.ShowBalanceChanges = false
+	p.ShowRawEffects = false
+
+	res, _ := cl.GetTransactionBlock("35viqvWEus3zdYfZCfiiGiFjwZYHN6KxCiQAfvV1eGH6", p)
+	bs, _ := json.MarshalIndent(res, "", "  ")
 	fmt.Println(string(bs))
 }
