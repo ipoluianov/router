@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
@@ -22,4 +24,9 @@ func main() {
 	res, _ := cl.GetTransactionBlock("35viqvWEus3zdYfZCfiiGiFjwZYHN6KxCiQAfvV1eGH6", p)
 	bs, _ := json.MarshalIndent(res, "", "  ")
 	fmt.Println(string(bs))
+
+	rawTrans, _ := base64.StdEncoding.DecodeString(res.RawTransaction)
+
+	h := hex.EncodeToString([]byte(rawTrans))
+	fmt.Println(h)
 }
