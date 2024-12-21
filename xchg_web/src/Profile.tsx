@@ -357,7 +357,7 @@ export function Profile() {
             return;
         }
 
-        let xchgAddr = "0x000102030405060708090A0B0C0D0E0F000102030405060708090A0B0C0D0E0F"
+        let xchgAddr = "0x5ded23a41eb84ec1f95b27d14222155f145a45e76a6377ae9cfcf754a4da9956"
 
         tx.moveCall({
             arguments: [tx.object(TESTNET_COUNTER_FUND_ID), tx.pure.address(xchgAddr), coin],

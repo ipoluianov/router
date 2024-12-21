@@ -8,6 +8,7 @@ import { Router } from "./Router";
 import { Network } from "./Network";
 import { Profile } from "./Profile";
 import { Fund } from "./Fund";
+import { CreateCounter } from "./CreateCounter";
 
 function App() {
 	const currentAccount = useCurrentAccount();
@@ -42,6 +43,7 @@ function App() {
 					px="4"
 					style={{ background: "var(--gray-a2)", minHeight: 500 }}
 				>
+					<CreateCounter />
 					<Fund />
 					<Profile />
 					<Router />

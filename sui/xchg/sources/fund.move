@@ -7,7 +7,8 @@ use sui::vec_set::{Self, VecSet};
 use sui::vec_map::{Self, VecMap};
 use sui::table::{Self, Table};
 use sui::{clock::Clock};
-use std::string::{String};
+use std::string::{Self, String};
+use sui::event;
 
 const ERR_WRONG_PUBLIC_KEY: u64 = 1;
 const ERR_WRONG_MSG: u64 = 2;
@@ -23,6 +24,11 @@ const ERR_XCHG_APP_ADDR_NOT_FOUND: u64 = 10;
 const ERR_XCHG_ROUTER_ALREADY_EXISTS: u64 = 12;
 
 const DIRECTORS_NETWORK: u32 = 0xFFFFFFFF;
+
+public struct LogEvent has copy, drop {
+    text: String,
+    num: u64,
+}
 
 public struct Fund has key, store {
 	id: UID,
@@ -66,6 +72,13 @@ public struct Profile has store {
     sponsoredXchgAddresses: vector<address>,
 }
 
+public struct Sponsor has store, drop {
+    limitPerDay: u64,
+    balance : u64,
+    lastOperation: u64,
+    suiAddr: address,
+}
+
 // Separated entity - based on XCHG address
 // There is no link to the profile
 // Optional: add link to the profile as priority source of funds
@@ -79,7 +92,7 @@ public struct XchgAddress has store {
     //____________________________________
     // Funds to spend
     // Priority for spending - SUI addresses of profiles
-    sponsors: vector<address>,
+    sponsors: vector<Sponsor>,
     // If no sponsors - spend this balance
     balance: u64,
     //////////////////////////////////////
@@ -175,7 +188,7 @@ public(package) fun create_fund(ctx: &mut TxContext) {
         proposalsToChangeParameters: vector[],
     };
     let mut networkIndex: u32 = 0;
-    while (networkIndex < 16) {
+    while (networkIndex < 4) {
         let network = Network {
             index: networkIndex as u8,
             routers: vector[],
@@ -276,7 +289,13 @@ public fun becomeSponsor(f: &mut Fund, xchgAddr: address, ctx: &mut TxContext) {
     assert!(f.addresses.contains(xchgAddr), ERR_XCHG_ADDR_NOT_FOUND);
     assert!(!profile.sponsoredXchgAddresses.contains(&xchgAddr), ERR_XCHG_ADDR_NOT_FOUND);
     let addr = f.addresses.borrow_mut(xchgAddr);
-    addr.sponsors.push_back(ctx.sender());
+    let sponsor = Sponsor {
+        limitPerDay: 1000,
+        balance: 1000,
+        lastOperation: 0,
+        suiAddr: ctx.sender(),
+    };
+    addr.sponsors.push_back(sponsor);
 }
 
 public fun stopSponsor(f: &mut Fund, xchgAddr: address, ctx: &mut TxContext) {
@@ -287,7 +306,7 @@ public fun stopSponsor(f: &mut Fund, xchgAddr: address, ctx: &mut TxContext) {
     let addr = f.addresses.borrow_mut(xchgAddr);
     let mut i = 0;
     while (i < addr.sponsors.length()) {
-        if (addr.sponsors[i] == ctx.sender()) {
+        if (addr.sponsors[i].suiAddr == ctx.sender()) {
             addr.sponsors.remove(i);
             break
         };
@@ -372,7 +391,7 @@ public fun withdrawFromProfile(f: &mut Fund, amount: u64, ctx: &mut TxContext) {
 // MSG:104 = [CHEQUE_ID:32, ROUTER_XCHG_ADDR:32, APPLICATION_XCHG_ADDR:32, AMOUNT:8]
 public fun apply_cheque(f: &mut Fund, pk: vector<u8>,  msg: vector<u8>, sig: vector<u8>, ctx: &mut TxContext) {
     assert!(pk.length() == 32, ERR_WRONG_PUBLIC_KEY);
-    assert!(msg.length() == 32, ERR_WRONG_MSG);
+    assert!(msg.length() == 104, ERR_WRONG_MSG);
     assert!(sig.length() == 64, ERR_WRONG_SIGNATURE_LEN);
 
     if (ed25519::ed25519_verify(&sig, &pk, &msg)) {
@@ -386,6 +405,7 @@ public fun apply_cheque(f: &mut Fund, pk: vector<u8>,  msg: vector<u8>, sig: vec
         // Parse Cheque ID
         while (i < 32) {
             vChequeId.push_back(msg[i]);
+            i = i + 1;
         };
         offset = offset + 32;
 
@@ -393,6 +413,7 @@ public fun apply_cheque(f: &mut Fund, pk: vector<u8>,  msg: vector<u8>, sig: vec
         i = 0;
         while (i < 32) {
             vRouterAddr.push_back(msg[offset+i]);
+            i = i + 1;
         };
         offset = offset + 32;
 
@@ -400,19 +421,38 @@ public fun apply_cheque(f: &mut Fund, pk: vector<u8>,  msg: vector<u8>, sig: vec
         i = 0;
         while (i < 32) {
             vAppAddress.push_back(msg[offset+i]);
+            i = i + 1;
         };
         offset = offset + 32;
 
+        i = 0;
         // Parse Amount
         while (i < 8) {
             amount = amount << 8;
-            amount = amount + (msg[offset+i] as u64);
+            let localOffset = offset + 8 - i - 1;
+            amount = amount + (msg[localOffset] as u64);
+            i = i + 1;
         };
+
+        // Parse Amount Little Endian
+        event::emit(LogEvent{ text: string::utf8(b"Parsed amount"), num: amount});
+
+        event::emit(LogEvent{ text: string::utf8(b"Parsed amount 1"), num: msg[96] as u64});
+        event::emit(LogEvent{ text: string::utf8(b"Parsed amount 2"), num: msg[97] as u64});
+
 
         // Check cheque ID
         let checkIdAsAddr = address::from_bytes(vChequeId);
-        let router = f.routers.borrow_mut(ctx.sender());
+        let routerAddr = address::from_bytes(vRouterAddr);
+        if (!f.routers.contains(routerAddr)) {
+            event::emit(LogEvent{ text: string::utf8(b"Router not found"), num: 0});
+            // Router not found - just skip it
+            return
+        };
+
+        let router = f.routers.borrow_mut(routerAddr);
         if (!router.chequeIds.contains(&checkIdAsAddr)) {
+            event::emit(LogEvent{ text: string::utf8(b"Cheque ID not found"), num: 0});
             // Cheque ID not found - just skip it
             // It may by replay attack
             return
@@ -421,9 +461,12 @@ public fun apply_cheque(f: &mut Fund, pk: vector<u8>,  msg: vector<u8>, sig: vec
         // find client account
         let clientAddr = address::from_bytes(pk);
         if (!f.addresses.contains(clientAddr)) {
+            event::emit(LogEvent{ text: string::utf8(b"Client not found"), num: 0});
             // No source of funds - nothing to do
             return
         };
+
+        event::emit(LogEvent{ text: string::utf8(b"Cheque applied"), num: amount});
 
         // Cheque cancellation
         router.chequeIds.remove(&checkIdAsAddr);
@@ -434,38 +477,54 @@ public fun apply_cheque(f: &mut Fund, pk: vector<u8>,  msg: vector<u8>, sig: vec
         let amountToDeveloper = amountOnePercent * 20;
         let mut amountToFund = amount;
 
+        event::emit(LogEvent{ text: string::utf8(b"Cheque applied"), num: amountOnePercent});
+        event::emit(LogEvent{ text: string::utf8(b"to router"), num: amountToRouter});
+        event::emit(LogEvent{ text: string::utf8(b"to dev"), num: amountToDeveloper});
+
         let xchgClient = f.addresses.borrow_mut(clientAddr);
+        
         // get money from sponsors
         let mut i = 0;
         while (i < xchgClient.sponsors.length()) {
-            let sponsorAddr = xchgClient.sponsors[i];
+            let sponsorAddr = xchgClient.sponsors[i].suiAddr;
             let sponsorProfile = f.profiles.borrow_mut(sponsorAddr);
-            if (sponsorProfile.balance >= amount) {
+            let sponsorBalance = xchgClient.sponsors[i].balance;
+            
+            let currentTime = clock::timestamp_ms();
+            let lastOperation = xchgClient.sponsors[i].lastOperation;
+            let limitPerDay = xchgClient.sponsors[i].limitPerDay;
+            // TODO:
+            let balanceToAdd = (currentTime - lastOperation) / 86400000 * limitPerDay;
+            sponsorBalance = sponsorBalance + balanceToAdd;
+            if (sponsorBalance > limitPerDay) {
+                sponsorBalance = limitPerDay;
+            };
+
+            if (sponsorBalance >= amount) {
                 sponsorProfile.balance = sponsorProfile.balance - amount;
                 xchgClient.balance = xchgClient.balance + amount;
+                event::emit(LogEvent{ text: string::utf8(b"get from sponsor"), num: xchgClient.balance});
                 break
             };
             i = i + 1;
         };
 
         // Try to transfer funds to the router owner
-        let routerAddr = address::from_bytes(vRouterAddr);
-        if (f.addresses.contains(routerAddr)) {
-            let xchgRouterAccount = f.addresses.borrow_mut(routerAddr);
-            let routerSUIAddress = xchgRouterAccount.ownerSuiAddr;
-            if (f.profiles.contains(routerSUIAddress)) {
-                let xchgAddress = f.addresses.borrow_mut(clientAddr);
+        let routerSUIAddress = router.owner;
+        if (f.profiles.contains(routerSUIAddress)) {
+            let xchgAddress = f.addresses.borrow_mut(clientAddr);
+            let routerProfile = f.profiles.borrow_mut(routerSUIAddress);
+            if (xchgAddress.balance >= amountToRouter) {
+                xchgAddress.balance = xchgAddress.balance - amountToRouter;
+                routerProfile.balance = routerProfile.balance + amountToRouter;
+                amountToFund = amountToFund - amountToRouter;
+                event::emit(LogEvent{ text: string::utf8(b"transfered to router"), num: amountToRouter});
 
-                let routerProfile = f.profiles.borrow_mut(routerSUIAddress);
-                if (xchgAddress.balance >= amountToRouter) {
-                    xchgAddress.balance = xchgAddress.balance - amountToRouter;
-                    routerProfile.balance = routerProfile.balance + amountToRouter;
-                    amountToFund = amountToFund - amountToRouter;
-                } else {
-                    routerProfile.balance = routerProfile.balance + xchgAddress.balance;
-                    amountToFund = amountToFund - xchgAddress.balance;
-                    xchgAddress.balance = 0;
-                };
+            } else {
+                routerProfile.balance = routerProfile.balance + xchgAddress.balance;
+                amountToFund = amountToFund - xchgAddress.balance;
+                event::emit(LogEvent{ text: string::utf8(b"transfered to router all in"), num: xchgAddress.balance});
+                xchgAddress.balance = 0;
             };
         };
 
@@ -478,23 +537,26 @@ public fun apply_cheque(f: &mut Fund, pk: vector<u8>,  msg: vector<u8>, sig: vec
                 xchgAddress.balance = xchgAddress.balance - amountToDeveloper;
                 appProfile.balance = appProfile.balance + amountToDeveloper;
                 amountToFund = amountToFund - amountToDeveloper;
+                event::emit(LogEvent{ text: string::utf8(b"transfered to dev"), num: amountToDeveloper});
             } else {
                 appProfile.balance = appProfile.balance + xchgAddress.balance;
                 amountToFund = amountToFund - xchgAddress.balance;
+                event::emit(LogEvent{ text: string::utf8(b"transfered to dev all in "), num: xchgAddress.balance});
                 xchgAddress.balance = 0;
             }
         };
 
+        event::emit(LogEvent{ text: string::utf8(b"transfered to common fund"), num: amountToFund});
         f.commonFund = f.commonFund + amountToFund;
 
         f.counter = f.counter + 1;
     };
 }
 
-public fun get_cheques_ids(f: &mut Fund, count: u32, clock: &Clock, ctx: &mut TxContext) : vector<address> {
+public fun get_cheques_ids(f: &mut Fund, xchgAddressOfRouter: address, count: u32, clock: &Clock, _ctx: &mut TxContext) : vector<address> {
     assert!(count > 0 && count < 100, ERR_WRONG_COUNT);
     let mut i: u256 = 0;
-    let router = f.routers.borrow_mut(ctx.sender());
+    let router = f.routers.borrow_mut(xchgAddressOfRouter);
     let timeStampNs = (clock.timestamp_ms() * 1000) as u256;
     let mut vecResult: vector<address> = vector[];
     while (i < (count as u256)) {

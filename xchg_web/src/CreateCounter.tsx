@@ -10,16 +10,7 @@ import { DError, makeError } from "./error.ts";
 import { TESTNET_COUNTER_FUND_ID } from "./constants.ts";
 import { Ed25519Keypair } from '@mysten/sui/crypto';
 
-export function CreateCounter({
-	onCreated,
-	visible,
-}: {
-	onCreated: (id: string) => void;
-	visible: boolean;
-}) {
-	if (!visible) {
-		return null;
-	}
+export function CreateCounter() {
 	const currentAccount = useCurrentAccount();
 	const counterPackageId = useNetworkVariable("counterPackageId");
 	const suiClient = useSuiClient();
@@ -110,17 +101,22 @@ export function CreateCounter({
 
 		const tx = new Transaction();
 
-		for (let i = 0; i < 100; i++) {
-			let pk = "4acbf07fd16933e3e4c6a47833f659e80724030d595d483ad7da29dc0d32eb5c"
-			let msg = "000102"
-			let sig = "8fac89c78d20cac21ba1e05115f40340dd9779f4f339903a6d99dcc2038221d7f704fa83012eb99b36d0e4c75c8cdd6a2e6d6c6c9c17a90f21f56b68f8545d04"
+		for (let i = 0; i < 1; i++) {
+			let pk = "5ded23a41eb84ec1f95b27d14222155f145a45e76a6377ae9cfcf754a4da9956"
+			let msg = "558c856fff2f137b3a6359796e9c545c21cbf1c4ddcd7768b3d24f79ec1ab3d7558c856fff2f137b3a6359796e9c545c21cbf1c4ddcd7768b3d24f79ec1ab3d7558c856fff2f137b3a6359796e9c545c21cbf1c4ddcd7768b3d24f79ec1ab3d70000000000000000"
+			let sig1 = "8fac89c78d20cac21ba1e05115f40340dd9779f4f339903a6d99dcc2038221d7f704fa83012eb99b36d0e4c75c8cdd6a2e6d6c6c9c17a90f21f56b68f8545d04"
+			let sig2 = "4a27dee562b8522f26a8b5600367a4e0b4673f5731d8fd3b3e30ad91e3f5adf93825f9d2a1a3670d24a82ba137026b06a4b60dbffc7251b30e5005cf545d7204"
 			let pk_b = parseHexString(pk);
 			let msg_b = parseHexString(msg);
-			let sig_b = parseHexString(sig);
+			let sig_b = parseHexString(sig2);
 
 			tx.moveCall({
-				arguments: [tx.object(TESTNET_COUNTER_FUND_ID), tx.pure.vector('u8', pk_b), tx.pure.vector('u8', msg_b), tx.pure.vector('u8', sig_b)],
-				target: `${counterPackageId}::fund::verify_signature`,
+				arguments: [
+					tx.object(TESTNET_COUNTER_FUND_ID), 
+					tx.pure.vector('u8', pk_b), 
+					tx.pure.vector('u8', msg_b), 
+					tx.pure.vector('u8', sig_b)],
+				target: `${counterPackageId}::fund::apply_cheque`,
 			});
 		}
 

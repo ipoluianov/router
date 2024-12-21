@@ -1,47 +1,43 @@
 package main
 
 import (
-	"encoding/base64"
+	"crypto/ed25519"
 	"encoding/hex"
 	"fmt"
 
-	"github.com/ipoluianov/router/suisdk"
+	"github.com/ipoluianov/router/xchg"
 )
 
-func parse() {
-	b1 := "AQAAAAAAAAEAGmXIAXaFMG3ViHLhWjHiu+9B6t+i1GkX4mzdXH/mP24Gc2ltcGxlBmNyZWF0ZQAAJHiUmN7rS4THPlhVSnORKixqI1iQWQOsaPmnKBjGR2YBa3+oNdGrNt7nFV0CfNrdY6cBAZ8WFKwuqjflpdQyxvCKVs8YAAAAACDe6Z8PsVqfHQSBRbRyZwVew8AEH/ArIFUl6fmRpoNTciR4lJje60uExz5YVUpzkSosaiNYkFkDrGj5pygYxkdm7gIAAAAAAADA9iUAAAAAAAABYQBrmxDV6JpsIL/6Jlg8qA/XkKBvWJbBvKKFqKNM4RF9T/Qw32iLaWma3cCe22IUPVFhU3ly2S5XCdJjjujmmaAMSsvwf9FpM+PkxqR4M/ZZ6AckAw1ZXUg619op3A0y61w="
-	b2 := "AQAAAAAAAAEAGmXIAXaFMG3ViHLhWjHiu+9B6t+i1GkX4mzdXH/mP24Gc2ltcGxlBmNyZWF0ZQAAJHiUmN7rS4THPlhVSnORKixqI1iQWQOsaPmnKBjGR2YBa3+oNdGrNt7nFV0CfNrdY6cBAZ8WFKwuqjflpdQyxvCLVs8YAAAAACCEF52nJlsF+blRcz4LTkX2/ju3O3QGMvfI5JxNwOyxJiR4lJje60uExz5YVUpzkSosaiNYkFkDrGj5pygYxkdm7gIAAAAAAADA9iUAAAAAAAABYQDTpDMTsh6UOyqT5l96yeCQD0U/hzZ147qxrRpwVc+k+iqW0VX6jiiXo9fllDXlVrPQsP0+otJiIU7gn0nLwicCSsvwf9FpM+PkxqR4M/ZZ6AckAw1ZXUg619op3A0y61w="
-
-	h1, _ := base64.StdEncoding.DecodeString(b1)
-	h2, _ := base64.StdEncoding.DecodeString(b2)
-
-	fmt.Println(hex.EncodeToString(h1))
-	fmt.Println(hex.EncodeToString(h2))
+// PUB: 5ded23a41eb84ec1f95b27d14222155f145a45e76a6377ae9cfcf754a4da9956
+// PRIV: a7dee35305a6a7984a0b16900d4adba8eb957c6bb8d71d36ea303f8eaec5d6be5ded23a41eb84ec1f95b27d14222155f145a45e76a6377ae9cfcf754a4da9956
+func generateKeys() {
+	pubKey, privateKey, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(hex.EncodeToString(pubKey))
+	fmt.Println(hex.EncodeToString(privateKey))
 }
 
 func main() {
-	parse()
-	return
-	cl := suisdk.NewClient(suisdk.MAINNET_URL)
-	cl.ExecTransaction()
+	r, err := xchg.GetRouterObject("0x5ded23a41eb84ec1f95b27d14222155f145a45e76a6377ae9cfcf754a4da9956")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	if len(r.Cheques) < 1 {
+		xchg.CreateChequesIDs("0x5ded23a41eb84ec1f95b27d14222155f145a45e76a6377ae9cfcf754a4da9956")
+
+		r, err = xchg.GetRouterObject("0x5ded23a41eb84ec1f95b27d14222155f145a45e76a6377ae9cfcf754a4da9956")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	}
+
+	xchg.ApplyCheque(r.Cheques[0])
+	//fundObj, _ := xchg.GetRouterObject("0xffff12030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f")
+	//fmt.Println(fundObj.Digest())
+
 }
-
-/*
-
-0100000000000001001a65c8017685306dd58872e15a31e2bbef41eadfa2d46917e26cdd5c7fe63f6e0673696d706c6506637265617465000024789498deeb4b84c73e58554a73912a2c6a2358905903ac68f9a72818c64766016b7fa835d1ab36dee7155d027cdadd63a701019f1614ac2eaa37e5a5d432c6f08a56cf180000000020
-dee99f0fb15a9f1d048145b47267055ec3c0041ff02b205525e9f991a6835372 
-24789498deeb4b84c73e58554a73912a2c6a2358905903ac68f9a72818c64766ee02000000000000c0f6250000000000000161
-00
-6b9b10d5e89a6c20bffa26583ca80fd790a06f5896c1bca285a8a34ce1117d4f
-f430df688b69699addc09edb62143d5161537972d92e5709d2638ee8e699a00c
-4acbf07fd16933e3e4c6a47833f659e80724030d595d483ad7da29dc0d32eb5c
-
-0100000000000001001a65c8017685306dd58872e15a31e2bbef41eadfa2d46917e26cdd5c7fe63f6e0673696d706c6506637265617465000024789498deeb4b84c73e58554a73912a2c6a2358905903ac68f9a72818c64766016b7fa835d1ab36dee7155d027cdadd63a701019f1614ac2eaa37e5a5d432c6f08b56cf180000000020
-84179da7265b05f9b951733e0b4e45f6fe3bb73b740632f7c8e49c4dc0ecb126 
-24789498deeb4b84c73e58554a73912a2c6a2358905903ac68f9a72818c64766ee02000000000000c0f6250000000000000161
-00
-d3a43313b21e943b2a93e65f7ac9e0900f453f873675e3bab1ad1a7055cfa4fa
-2a96d155fa8e2897a3d7e59435e556b3d0b0fd3ea2d262214ee09f49cbc22702
-4acbf07fd16933e3e4c6a47833f659e80724030d595d483ad7da29dc0d32eb5c
-
-*/

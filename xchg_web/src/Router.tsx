@@ -175,7 +175,7 @@ export function Router() {
                 tx.pure.u32(2),
                 tx.pure.string("name of router"),
                 tx.pure.string("192.168.0.1"),
-                tx.pure.address("0xFFFF02030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f"),
+                tx.pure.address("0x5ded23a41eb84ec1f95b27d14222155f145a45e76a6377ae9cfcf754a4da9956"),
             ],
             target: `${counterPackageId}::fund::createRouter`,
         });
@@ -204,7 +204,7 @@ export function Router() {
         );
     }
 
-    const addStake = async () => {
+    const addStake = async (xchgAddr: string) => {
         if (!currentAccount) {
             return;
         }
@@ -214,7 +214,7 @@ export function Router() {
         tx.moveCall({
             arguments: [
                 tx.object(TESTNET_COUNTER_FUND_ID), 
-                tx.pure.address("0xffff02030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f"),
+                tx.pure.address(xchgAddr),
                 tx.pure.u64(1000),
             ],
             target: `${counterPackageId}::fund::addStake`,
@@ -244,7 +244,7 @@ export function Router() {
         );
     }
 
-    const removeStake = async () => {
+    const removeStake = async (xchgAddr: string) => {
         if (!currentAccount) {
             return;
         }
@@ -253,7 +253,7 @@ export function Router() {
         tx.moveCall({
             arguments: [
                 tx.object(TESTNET_COUNTER_FUND_ID), 
-                tx.pure.address("0xffff02030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f"),
+                tx.pure.address(xchgAddr),
                 tx.pure.u64(100),
             ],
             target: `${counterPackageId}::fund::removeStake`,
@@ -556,13 +556,13 @@ export function Router() {
                                 <Flex direction="row">
                                     <Button
                                         style={{ margin: '12px' }}
-                                        onClick={() => addStake()}
+                                        onClick={() => addStake(item.xchgAddr)}
                                         disabled={waitingForTxn !== ""}
                                     > ADD STAKE
                                     </Button>
                                     <Button
                                         style={{ margin: '12px' }}
-                                        onClick={() => removeStake()}
+                                        onClick={() => removeStake(item.xchgAddr)}
                                         disabled={waitingForTxn !== ""}
                                     > REMOVE STAKE
                                     </Button>
