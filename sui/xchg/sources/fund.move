@@ -74,7 +74,7 @@ public struct Profile has store {
 
 public struct Sponsor has store, drop {
     limitPerDay: u64,
-    balance : u64,
+    virtualBalance : u64,
     lastOperation: u64,
     suiAddr: address,
 }
@@ -291,7 +291,7 @@ public fun becomeSponsor(f: &mut Fund, xchgAddr: address, ctx: &mut TxContext) {
     let addr = f.addresses.borrow_mut(xchgAddr);
     let sponsor = Sponsor {
         limitPerDay: 1000,
-        balance: 1000,
+        virtualBalance: 1000,
         lastOperation: 0,
         suiAddr: ctx.sender(),
     };
@@ -389,7 +389,7 @@ public fun withdrawFromProfile(f: &mut Fund, amount: u64, ctx: &mut TxContext) {
 }
 
 // MSG:104 = [CHEQUE_ID:32, ROUTER_XCHG_ADDR:32, APPLICATION_XCHG_ADDR:32, AMOUNT:8]
-public fun apply_cheque(f: &mut Fund, pk: vector<u8>,  msg: vector<u8>, sig: vector<u8>, ctx: &mut TxContext) {
+public fun apply_cheque(f: &mut Fund, pk: vector<u8>,  msg: vector<u8>, sig: vector<u8>, clock: &Clock, ctx: &mut TxContext) {
     assert!(pk.length() == 32, ERR_WRONG_PUBLIC_KEY);
     assert!(msg.length() == 104, ERR_WRONG_MSG);
     assert!(sig.length() == 64, ERR_WRONG_SIGNATURE_LEN);
@@ -486,21 +486,23 @@ public fun apply_cheque(f: &mut Fund, pk: vector<u8>,  msg: vector<u8>, sig: vec
         // get money from sponsors
         let mut i = 0;
         while (i < xchgClient.sponsors.length()) {
+            // Prepare data
             let sponsorAddr = xchgClient.sponsors[i].suiAddr;
             let sponsorProfile = f.profiles.borrow_mut(sponsorAddr);
-            let sponsorBalance = xchgClient.sponsors[i].balance;
-            
-            let currentTime = clock::timestamp_ms();
+            let mut sponsorVirtualBalance = xchgClient.sponsors[i].virtualBalance;
+            let currentTime = clock.timestamp_ms();
             let lastOperation = xchgClient.sponsors[i].lastOperation;
             let limitPerDay = xchgClient.sponsors[i].limitPerDay;
-            // TODO:
-            let balanceToAdd = (currentTime - lastOperation) / 86400000 * limitPerDay;
-            sponsorBalance = sponsorBalance + balanceToAdd;
-            if (sponsorBalance > limitPerDay) {
-                sponsorBalance = limitPerDay;
+
+            // Calc new virtual balance of sponsor 
+            let balanceToAdd = (currentTime - lastOperation)  * limitPerDay / 86400000;
+            sponsorVirtualBalance = sponsorVirtualBalance + balanceToAdd;
+            if (sponsorVirtualBalance > limitPerDay) {
+                sponsorVirtualBalance = limitPerDay;
             };
 
-            if (sponsorBalance >= amount) {
+            if (sponsorVirtualBalance >= amount) {
+                xchgClient.sponsors[i].virtualBalance = sponsorVirtualBalance - amount;
                 sponsorProfile.balance = sponsorProfile.balance - amount;
                 xchgClient.balance = xchgClient.balance + amount;
                 event::emit(LogEvent{ text: string::utf8(b"get from sponsor"), num: xchgClient.balance});
