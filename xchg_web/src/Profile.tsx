@@ -2,32 +2,52 @@ import {
     useSignAndExecuteTransaction,
     useSuiClient,
 } from "@mysten/dapp-kit";
-import type { SuiObjectData, GetDynamicFieldObjectParams } from "@mysten/sui/client";
 import { Transaction } from "@mysten/sui/transactions";
-import { Button, Flex, Heading } from "@radix-ui/themes";
+import { Button, Flex } from "@radix-ui/themes";
 import { useNetworkVariable } from "./networkConfig";
 import { useEffect, useState } from "react";
-import ClipLoader from "react-spinners/ClipLoader";
 import { getObjectFields, shortAddress } from "./utils";
-import { decryptMessage, encryptMessage } from "./aes";
 import { TB_TYPE, TESTNET_COUNTER_FUND_ID } from "./constants";
-import { useCurrentAccount } from "@mysten/dapp-kit";
 import { makeError } from "./error";
 import type { WalletAccount } from '@mysten/wallet-standard';
 
-export function Profile() {
+export function Profile(
+    { currentAccount, }: { currentAccount: WalletAccount }
+) {
 
-    const currentAccount = useCurrentAccount();
+    let defaultProfileState: ProfileState = {
+        balance: "",
+        favoriteXchgAddresses: [],
+        own_routers: [],
+        sponsoredXchgAddresses: [],
+    }
 
+
+    //let currentAccount = useCurrentAccount();
+    const [profileLoaded, setProfileLoaded] = useState(false);
     const counterPackageId = useNetworkVariable("counterPackageId");
     const suiClient = useSuiClient();
     const { mutate: signAndExecute } = useSignAndExecuteTransaction();
-    const [isWaitingForTransaction, setIsWaitingForTransaction] = useState(false);
+    const [profileState, setProfileState] = useState(defaultProfileState);
 
-    const [textToSet, setTextToSet] = useState("");
+    const [profileNotFound, setProfileNotFound] = useState(false);
+
+    console.log("Current Account: ", currentAccount);
+
+    useEffect(() => {
+        if (!profileLoaded) {
+            getProfileObject();
+        }
+    });
+
+    const reloadProfile = () => {
+        setProfileLoaded(false);
+        setProfileNotFound(false);
+        getProfileObject();
+    }
 
     interface XchgAddrObject {
-        balance : string,
+        balance: string,
         ownerSuiAddr: string,
     }
 
@@ -39,16 +59,8 @@ export function Profile() {
         xchgAddrObject: XchgAddrObject,
     }
 
-    let defaultProfileState: ProfileState = {
-        balance: "",
-        favoriteXchgAddresses: [],
-        own_routers: [],
-        sponsoredXchgAddresses: [],
-    }
 
-    const [profileState, setProfileState] = useState(defaultProfileState);
 
-    const [waitingForTxn, setWaitingForTxn] = useState("");
 
     const prepareCoin = async (account: WalletAccount, tx: Transaction, coinType: string, amount: bigint): (Promise<TransactionResult | DError>) => {
         if (!account) {
@@ -99,8 +111,6 @@ export function Profile() {
         const coin = tx.splitCoins(coins[0].coinObjectId, [amount]);
         return coin;
     }
-
-    // TableID: "0x0de187b0dcbc036bd3b0d6ae8a115b3e7e36d8cb9a8cb2ac95d92733fd01a9c5"
 
     const getProfilesTableId = async () => {
         let fundId = TESTNET_COUNTER_FUND_ID;
@@ -168,54 +178,66 @@ export function Profile() {
     }
 
     const getProfileObject = async () => {
-        let profilesTableId = await getProfilesTableId();
-        const resultGetProfile = await suiClient.getDynamicFieldObject(
-            {
-                parentId: profilesTableId,
-                name: {
-                    type: "address",
-                    value: currentAccount?.address
+        try {
+            setProfileLoaded(false);
+            console.log("Get Profile Object", currentAccount);
+            if (!currentAccount) {
+                console.log("Current Account not found");
+                return;
+            }
+            let profilesTableId = await getProfilesTableId();
+            const resultGetProfile = await suiClient.getDynamicFieldObject(
+                {
+                    parentId: profilesTableId,
+                    name: {
+                        type: "address",
+                        value: currentAccount?.address
+                    }
                 }
+            );
+            console.log("Profile Object: ", resultGetProfile);
+            setProfileLoaded(true);
+
+            if (resultGetProfile.data == null) {
+                console.log("Profile Object not found");
+                setProfileNotFound(true);
+                return;
             }
-        );
-        console.log("Profile Object: ", resultGetProfile);
 
-        if (resultGetProfile.data == null) {
-            console.log("Profile Object not found");
-            return;
-        }
+            let fields = getObjectFields(resultGetProfile.data);
+            fields = fields.value.fields;
+            console.log("Profile Fields: ", fields);
 
-        let fields = getObjectFields(resultGetProfile.data);
-        fields = fields.value.fields;
-        console.log("Profile Fields: ", fields);
-
-        let state: ProfileState = {
-            balance: fields.balance,
-            favoriteXchgAddresses: [],
-            own_routers: [],
-            sponsoredXchgAddresses: [],
-        }
-
-        for (let i = 0; i < fields.favoriteXchgAddresses.length; i++) {
-            let item = fields.favoriteXchgAddresses[i];
-            let favItem: FavotiveXchgAddress = {
-                name: item.fields.name,
-                group: item.fields.group,
-                description: item.fields.description,
-                xchgAddr: item.fields.xchgAddr,
+            let state: ProfileState = {
+                balance: fields.balance,
+                favoriteXchgAddresses: [],
+                own_routers: [],
+                sponsoredXchgAddresses: [],
             }
-            let xchgAddressObject = await getXchgAddressObject(item.fields.xchgAddr);
-            favItem.xchgAddrObject = xchgAddressObject;
 
-            state.favoriteXchgAddresses.push(favItem);
+            for (let i = 0; i < fields.favoriteXchgAddresses.length; i++) {
+                let item = fields.favoriteXchgAddresses[i];
+                let favItem: FavotiveXchgAddress = {
+                    name: item.fields.name,
+                    group: item.fields.group,
+                    description: item.fields.description,
+                    xchgAddr: item.fields.xchgAddr,
+                }
+                let xchgAddressObject = await getXchgAddressObject(item.fields.xchgAddr);
+                favItem.xchgAddrObject = xchgAddressObject;
+
+                state.favoriteXchgAddresses.push(favItem);
+            }
+
+            console.log("State", state);
+
+            //let favoriteXchgAddresses = fields.value.fields.favoriteXchgAddresses.fields;
+            //console.log("Favorite Xchg Addresses: ", favoriteXchgAddresses);
+
+            setProfileState(state);
+        } catch (ex) {
+            console.log("Exception Error: ", ex);
         }
-
-        console.log("State", state);
-
-        //let favoriteXchgAddresses = fields.value.fields.favoriteXchgAddresses.fields;
-        //console.log("Favorite Xchg Addresses: ", favoriteXchgAddresses);
-
-        setProfileState(state);
     }
 
     const create_profile = async () => {
@@ -244,49 +266,7 @@ export function Profile() {
                         },
                     });
 
-                    alert("OK");
-                },
-                onError: (error) => {
-                    alert("Error: " + error);
-                }
-
-            },
-        );
-    }
-
-    const createRouter = async () => {
-        if (!currentAccount) {
-            return;
-        }
-
-        const tx = new Transaction();
-
-        const coin = await prepareCoin(currentAccount, tx, TB_TYPE, 10000000000n);
-        console.log('coin', coin);
-        // if coin is a DError
-        if ('errorMessage' in coin) {
-            alert('Error: ' + coin.errorMessage);
-            return;
-        }
-
-        tx.moveCall({
-            arguments: [tx.object(TESTNET_COUNTER_FUND_ID), coin],
-            target: `${counterPackageId}::fund::create_router_account`,
-        });
-
-        signAndExecute(
-            {
-                transaction: tx,
-            },
-            {
-                onSuccess: async ({ digest }) => {
-                    const { effects } = await suiClient.waitForTransaction({
-                        digest: digest,
-                        options: {
-                            showEffects: true,
-                            showRawEffects: true,
-                        },
-                    });
+                    reloadProfile();
 
                     alert("OK");
                 },
@@ -432,8 +412,8 @@ export function Profile() {
 
         tx.moveCall({
             arguments: [
-                tx.object(TESTNET_COUNTER_FUND_ID), 
-                tx.pure.address(xchgAddr), 
+                tx.object(TESTNET_COUNTER_FUND_ID),
+                tx.pure.address(xchgAddr),
                 tx.pure.string("name"),
                 tx.pure.string("group"),
                 tx.pure.string("description"),
@@ -465,83 +445,88 @@ export function Profile() {
         );
     }
 
-
-
-    let isDisabled = false;
-    if (isWaitingForTransaction) {
-        isDisabled = true;
+    if (!currentAccount) {
+        return <div>Loading account...</div>;
     }
+
 
     return (
         <>
             <hr style={{ marginTop: '20px' }} />
             <h1>PROFILE</h1>
-
-            <Flex direction="column" gap="2">
-                <Flex direction="column" gap="2">
-                    <Flex direction="column">
-                        <Flex direction="row">
-                            <Button
-                                style={{ margin: '12px' }}
-                                onClick={() => create_profile()}
-                                disabled={waitingForTxn !== ""}
-                            >
-                                CREATE PROFILE
-                            </Button>
-                        </Flex>
-                        <Flex direction="row">
-                            <Button
-                                style={{ margin: '12px' }}
-                                onClick={() => depositToProfile()}
-                                disabled={waitingForTxn !== ""}
-                            > DEPOSIT TO PROFILE
-                            </Button>
-                            <Button
-                                style={{ margin: '12px' }}
-                                onClick={() => depositToXchgAddress()}
-                                disabled={waitingForTxn !== ""}
-                            > DEPOSIT TO ADDRESS
-                            </Button>
-                            <Button
-                                style={{ margin: '12px' }}
-                                onClick={() => removeStake()}
-                                disabled={waitingForTxn !== ""}
-                            > REMOVE STAKE
-                            </Button>
-                        </Flex>
-                        <Flex direction="row">
-                            <Button
-                                style={{ margin: '12px' }}
-                                onClick={() => addFavoriteXchgAddress()}
-                                disabled={waitingForTxn !== ""}
-                            > ADD TO FAVORITES
-                            </Button>
-                        </Flex>
-                        <Flex direction="row">
-                            <Button
-                                style={{ margin: '12px' }}
-                                onClick={() => getProfileObject()}
-                                disabled={waitingForTxn !== ""}
-                            > GET STATE
-                            </Button>
-                        </Flex>
-                    </Flex>
-                    <Flex>
-                        Balance : {profileState.balance}
-                    </Flex>
-                    <Flex>
-                        Favorite Xchg Addresses:
-                        <Flex direction="column">
-                            {profileState.favoriteXchgAddresses.map((item, index) => (
-                                <Flex key={index}>
-                                    <Flex>{item.name} - {item.group} - {item.description} - {shortAddress(item.xchgAddr)} - {item.xchgAddrObject.balance} - {shortAddress(item.xchgAddrObject.ownerSuiAddr)}</Flex>
-                                </Flex>
-                            ))}
-                        </Flex>
-                    </Flex>
-
-                </Flex>
+            <Flex>
+                {profileLoaded ? <div>profile LOADED</div> : <div>loading</div>}
             </Flex>
+
+            {profileNotFound
+                &&
+                <Button
+                    style={{ margin: '12px' }}
+                    onClick={() => create_profile()}
+                >
+                    CREATE PROFILE
+                </Button>
+            }
+
+            {profileLoaded && !profileNotFound &&
+                <Flex direction="column" gap="2">
+                    <Flex direction="column" gap="2">
+                        <Flex direction="column">
+                            <Flex direction="row">
+                                <Button
+                                    style={{ margin: '12px' }}
+                                    onClick={() => depositToProfile()}
+
+                                > DEPOSIT TO PROFILE
+                                </Button>
+                                <Button
+                                    style={{ margin: '12px' }}
+                                    onClick={() => depositToXchgAddress()}
+
+                                > DEPOSIT TO ADDRESS
+                                </Button>
+                                <Button
+                                    style={{ margin: '12px' }}
+                                    onClick={() => removeStake()}
+
+                                > REMOVE STAKE
+                                </Button>
+                            </Flex>
+                            <Flex direction="row">
+                                <Button
+                                    style={{ margin: '12px' }}
+                                    onClick={() => addFavoriteXchgAddress()}
+
+                                > ADD TO FAVORITES
+                                </Button>
+                            </Flex>
+                            <Flex direction="row">
+                                <Button
+                                    style={{ margin: '12px' }}
+                                    onClick={() => getProfileObject()}
+
+                                > GET STATE
+                                </Button>
+                            </Flex>
+                        </Flex>
+                        <Flex>
+                            Balance : {profileState.balance}
+                        </Flex>
+                        <Flex>
+                            Favorite Xchg Addresses:
+                            <Flex direction="column">
+                                {profileState.favoriteXchgAddresses.map((item, index) => (
+                                    <Flex key={index}>
+                                        <Flex>{item.name} - {item.group} - {item.description} - {shortAddress(item.xchgAddr)} - {item.xchgAddrObject.balance} - {shortAddress(item.xchgAddrObject.ownerSuiAddr)}</Flex>
+                                    </Flex>
+                                ))}
+                            </Flex>
+                        </Flex>
+
+                    </Flex>
+                </Flex>
+            }
+
         </>
     );
 }
