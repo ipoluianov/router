@@ -47,7 +47,11 @@ func GetRouterObject(routerXchgAddr string) (*RouterObject, error) {
 		fmt.Println(err.Error())
 		return nil, err
 	}
-	// chequeIds/data/fields/data/contents/[0]
+
+	if res.Data == nil {
+		fmt.Println("No router found")
+		return nil, errors.New("no router found")
+	}
 
 	c.IpAddr = GetStringValueByPath(res.Data.Content.Fields, "value/fields/ipAddr")
 	c.Segment = uint32(GetNumberValueByPath(res.Data.Content.Fields, "value/fields/segment"))

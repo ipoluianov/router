@@ -3,7 +3,7 @@ import {
     useSuiClient,
 } from "@mysten/dapp-kit";
 import { Transaction } from "@mysten/sui/transactions";
-import { Button, Flex } from "@radix-ui/themes";
+import { Button, Flex, Table } from "@radix-ui/themes";
 import { useNetworkVariable } from "./networkConfig";
 import { useEffect, useState } from "react";
 import { getObjectFields, shortAddress } from "./utils";
@@ -31,6 +31,7 @@ export function Profile(
     const [profileState, setProfileState] = useState(defaultProfileState);
 
     const [profileNotFound, setProfileNotFound] = useState(false);
+    const [xchgAddressToAdd, setXchgAddressToAdd] = useState("");
 
     console.log("Current Account: ", currentAccount);
 
@@ -55,12 +56,10 @@ export function Profile(
         name: string,
         group: string,
         description: string,
+        balance: string,
         xchgAddr: string,
         xchgAddrObject: XchgAddrObject,
     }
-
-
-
 
     const prepareCoin = async (account: WalletAccount, tx: Transaction, coinType: string, amount: bigint): (Promise<TransactionResult | DError>) => {
         if (!account) {
@@ -217,11 +216,20 @@ export function Profile(
 
             for (let i = 0; i < fields.favoriteXchgAddresses.length; i++) {
                 let item = fields.favoriteXchgAddresses[i];
+
+                let addrObj = await getXchgAddressObject(item.fields.xchgAddr);
+
+                let balance = "-";
+                if (addrObj != null) {
+                    balance = addrObj.balance;
+                }
+
                 let favItem: FavotiveXchgAddress = {
                     name: item.fields.name,
                     group: item.fields.group,
                     description: item.fields.description,
                     xchgAddr: item.fields.xchgAddr,
+                    balance: balance,
                 }
                 let xchgAddressObject = await getXchgAddressObject(item.fields.xchgAddr);
                 favItem.xchgAddrObject = xchgAddressObject;
@@ -312,6 +320,8 @@ export function Profile(
                         },
                     });
 
+                    reloadProfile();
+
                     alert("OK");
                 },
                 onError: (error) => {
@@ -322,7 +332,7 @@ export function Profile(
         );
     }
 
-    const depositToXchgAddress = async () => {
+    const depositToXchgAddress = async (xchgAddr: string) => {
         if (!currentAccount) {
             return;
         }
@@ -337,7 +347,7 @@ export function Profile(
             return;
         }
 
-        let xchgAddr = "0x5ded23a41eb84ec1f95b27d14222155f145a45e76a6377ae9cfcf754a4da9956"
+        //let xchgAddr = "0x5ded23a41eb84ec1f95b27d14222155f145a45e76a6377ae9cfcf754a4da9956"
 
         tx.moveCall({
             arguments: [tx.object(TESTNET_COUNTER_FUND_ID), tx.pure.address(xchgAddr), coin],
@@ -357,6 +367,7 @@ export function Profile(
                             showRawEffects: true,
                         },
                     });
+                    reloadProfile();
                     alert("OK");
                 },
                 onError: (error) => {
@@ -408,8 +419,9 @@ export function Profile(
 
         const tx = new Transaction();
 
-        let xchgAddr = "0x000102030405060708090A0B0C0D0E0F000102030405060708090A0B0C0D0E0F"
+        //let xchgAddr = "0x000102030405060708090A0B0C0D0E0F000102030405060708090A0B0C0D0E0F"
 
+        let xchgAddr = xchgAddressToAdd;
         tx.moveCall({
             arguments: [
                 tx.object(TESTNET_COUNTER_FUND_ID),
@@ -435,6 +447,124 @@ export function Profile(
                         },
                     });
                     console.log("Effects: ", effects);
+                    reloadProfile();
+                    alert("OK");
+                },
+                onError: (error) => {
+                    alert("Error: " + error);
+                }
+
+            },
+        );
+    }
+
+    const removeFavoriteXchgAddress = async (xchgAddr: string) => {
+        if (!currentAccount) {
+            return;
+        }
+
+        const tx = new Transaction();
+        tx.moveCall({
+            arguments: [
+                tx.object(TESTNET_COUNTER_FUND_ID),
+                tx.pure.address(xchgAddr),
+            ],
+            target: `${counterPackageId}::fund::removeFavoriteXchgAddress`,
+        });
+
+        signAndExecute(
+            {
+                transaction: tx,
+            },
+            {
+                onSuccess: async ({ digest }) => {
+                    const { effects } = await suiClient.waitForTransaction({
+                        digest: digest,
+                        options: {
+                            showEffects: true,
+                            showRawEffects: true,
+                        },
+                    });
+                    console.log("Effects: ", effects);
+                    reloadProfile();
+                    alert("OK");
+                },
+                onError: (error) => {
+                    alert("Error: " + error);
+                }
+
+            },
+        );
+    }
+
+    const startSponsoring = async (xchgAddr: string) => {
+        if (!currentAccount) {
+            return;
+        }
+
+        const tx = new Transaction();
+        tx.moveCall({
+            arguments: [
+                tx.object(TESTNET_COUNTER_FUND_ID),
+                tx.pure.address(xchgAddr),
+            ],
+            target: `${counterPackageId}::fund::becomeSponsor`,
+        });
+
+        signAndExecute(
+            {
+                transaction: tx,
+            },
+            {
+                onSuccess: async ({ digest }) => {
+                    const { effects } = await suiClient.waitForTransaction({
+                        digest: digest,
+                        options: {
+                            showEffects: true,
+                            showRawEffects: true,
+                        },
+                    });
+                    console.log("Effects: ", effects);
+                    reloadProfile();
+                    alert("OK");
+                },
+                onError: (error) => {
+                    alert("Error: " + error);
+                }
+
+            },
+        );
+    }
+
+    const stopSponsoring = async (xchgAddr: string) => {
+        if (!currentAccount) {
+            return;
+        }
+
+        const tx = new Transaction();
+        tx.moveCall({
+            arguments: [
+                tx.object(TESTNET_COUNTER_FUND_ID),
+                tx.pure.address(xchgAddr),
+            ],  
+            target: `${counterPackageId}::fund::stopSponsor`,
+        });
+
+        signAndExecute(
+            {
+                transaction: tx,
+            },
+            {
+                onSuccess: async ({ digest }) => {
+                    const { effects } = await suiClient.waitForTransaction({
+                        digest: digest,
+                        options: {
+                            showEffects: true,
+                            showRawEffects: true,
+                        },
+                    });
+                    console.log("Effects: ", effects);
+                    reloadProfile();
                     alert("OK");
                 },
                 onError: (error) => {
@@ -449,13 +579,17 @@ export function Profile(
         return <div>Loading account...</div>;
     }
 
+    const displayXchgBalance = (balanceStr: string) => {
+        return parseFloat(balanceStr);
+    }
+
 
     return (
         <>
             <hr style={{ marginTop: '20px' }} />
             <h1>PROFILE</h1>
             <Flex>
-                {profileLoaded ? <div>profile LOADED</div> : <div>loading</div>}
+                {profileLoaded ? <div></div> : <div>loading</div>}
             </Flex>
 
             {profileNotFound
@@ -470,60 +604,67 @@ export function Profile(
 
             {profileLoaded && !profileNotFound &&
                 <Flex direction="column" gap="2">
+                    <Flex>
+                        {currentAccount.address}
+                    </Flex>
                     <Flex direction="column" gap="2">
-                        <Flex direction="column">
-                            <Flex direction="row">
-                                <Button
-                                    style={{ margin: '12px' }}
-                                    onClick={() => depositToProfile()}
-
-                                > DEPOSIT TO PROFILE
-                                </Button>
-                                <Button
-                                    style={{ margin: '12px' }}
-                                    onClick={() => depositToXchgAddress()}
-
-                                > DEPOSIT TO ADDRESS
-                                </Button>
-                                <Button
-                                    style={{ margin: '12px' }}
-                                    onClick={() => removeStake()}
-
-                                > REMOVE STAKE
-                                </Button>
+                        <Flex direction='column'>
+                            <Flex direction='row' style={{ backgroundColor: '#333' }}>
+                                <Flex style={{ fontSize: '24pt' }}>BALANCE</Flex>
+                                <Flex flexGrow='1'></Flex>
+                                <Button onClick={() => depositToProfile()}>DEPOSIT</Button>
                             </Flex>
-                            <Flex direction="row">
-                                <Button
-                                    style={{ margin: '12px' }}
-                                    onClick={() => addFavoriteXchgAddress()}
-
-                                > ADD TO FAVORITES
-                                </Button>
-                            </Flex>
-                            <Flex direction="row">
-                                <Button
-                                    style={{ margin: '12px' }}
-                                    onClick={() => getProfileObject()}
-
-                                > GET STATE
-                                </Button>
+                            <Flex direction='row' style={{ backgroundColor: '#333' }}>
+                                <Flex style={{ fontSize: '24pt' }}>{displayXchgBalance(profileState.balance)} bytes</Flex>
+                                <Flex flexGrow='1'></Flex>
+                                <Button onClick={() => removeStake()}>WITHDRAW</Button>
                             </Flex>
                         </Flex>
-                        <Flex>
-                            Balance : {profileState.balance}
-                        </Flex>
-                        <Flex>
-                            Favorite Xchg Addresses:
+                        <Flex direction='column'>
+                            <Flex style={{ fontSize: '24pt' }}>My Favorites:</Flex>
+                            <Flex direction='row'>
+                                <input 
+                                placeholder="XCHG address"
+                                style={{ width: '300px' }}
+                                value={xchgAddressToAdd}
+                                onChange={(e) => setXchgAddressToAdd(e.target.value)}
+                                >
+                                </input>
+                                <Button onClick={() => addFavoriteXchgAddress()}>ADD</Button>
+                            </Flex>
+
                             <Flex direction="column">
                                 {profileState.favoriteXchgAddresses.map((item, index) => (
-                                    <Flex key={index}>
-                                        <Flex>{item.name} - {item.group} - {item.description} - {shortAddress(item.xchgAddr)} - {item.xchgAddrObject.balance} - {shortAddress(item.xchgAddrObject.ownerSuiAddr)}</Flex>
+                                    <Flex key={index} style={{ borderTop: '1px solid #DDD' }} direction='column'>
+                                        <Flex>XCHG Address: {item.xchgAddr}</Flex>
+                                        <Flex>Group: {item.group}</Flex>
+                                        <Flex>Description: {item.description}</Flex>
+                                        <Flex>Balance: {item.balance}</Flex>
+                                        <Flex>
+                                            <Button onClick={() => removeFavoriteXchgAddress(item.xchgAddr)}>REMOVE</Button>
+                                            <Button onClick={() => depositToXchgAddress(item.xchgAddr)}>DEPOSIT TO ADDRESS</Button>
+                                            <Button onClick={() => startSponsoring(item.xchgAddr)}>START SPONSORING</Button>
+                                            <Button onClick={() => stopSponsoring(item.xchgAddr)}>STOP SPONSORING</Button>
+                                        </Flex>
                                     </Flex>
-                                ))}
+                                ))
+                                }
                             </Flex>
                         </Flex>
 
                     </Flex>
+
+                    <Flex>
+                    0x5ded23a41eb84ec1f95b27d14222155f145a45e76a6377ae9cfcf754a4da9956
+                    </Flex>
+
+                    <hr />
+                    <hr />
+                    <hr />
+                    <hr />
+                    <hr />
+                    <Button onClick={() => getProfileObject()}>GET STATE</Button>
+
                 </Flex>
             }
 

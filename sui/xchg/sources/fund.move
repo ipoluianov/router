@@ -389,7 +389,7 @@ public fun withdrawFromProfile(f: &mut Fund, amount: u64, ctx: &mut TxContext) {
 }
 
 // MSG:104 = [CHEQUE_ID:32, ROUTER_XCHG_ADDR:32, APPLICATION_XCHG_ADDR:32, AMOUNT:8]
-public fun apply_cheque(f: &mut Fund, pk: vector<u8>,  msg: vector<u8>, sig: vector<u8>, clock: &Clock, ctx: &mut TxContext) {
+public fun apply_cheque(f: &mut Fund, pk: vector<u8>,  msg: vector<u8>, sig: vector<u8>, clock: &Clock, _ctx: &mut TxContext) {
     assert!(pk.length() == 32, ERR_WRONG_PUBLIC_KEY);
     assert!(msg.length() == 104, ERR_WRONG_MSG);
     assert!(sig.length() == 64, ERR_WRONG_SIGNATURE_LEN);
@@ -550,6 +550,8 @@ public fun apply_cheque(f: &mut Fund, pk: vector<u8>,  msg: vector<u8>, sig: vec
 
         event::emit(LogEvent{ text: string::utf8(b"transfered to common fund"), num: amountToFund});
         f.commonFund = f.commonFund + amountToFund;
+        let xchgAddress = f.addresses.borrow_mut(clientAddr);
+        xchgAddress.balance = xchgAddress.balance - amountToFund;
 
         f.counter = f.counter + 1;
     };

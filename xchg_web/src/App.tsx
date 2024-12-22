@@ -44,6 +44,7 @@ function App() {
 				justify="between"
 				style={{
 					borderBottom: "1px solid var(--gray-a2)",
+					backgroundColor: '#EEFF00',
 				}}
 			>
 				<Box>
@@ -66,12 +67,7 @@ function App() {
 				</Box>
 			</Flex>
 			<Container>
-				<Container
-					mt="5"
-					pt="2"
-					px="4"
-					style={{ background: "var(--gray-a2)", minHeight: 500 }}
-				>
+				<Container>
 					{content}
 					{currentAccount ? (
 						<Heading></Heading>
