@@ -203,6 +203,7 @@ func ApplyCheque(chequeID string) {
 			xchgPublicKeyArray,
 			xchgMsgArray,
 			xchgSignatureArray,
+			CLOCK_OBJECT_ID,
 		},
 		Gas:       &gasObj,
 		GasBudget: "10000000",

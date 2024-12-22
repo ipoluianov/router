@@ -31,7 +31,15 @@ function App() {
 				<Box>
 					<Heading><a href="/">SUI Notes</a></Heading>
 				</Box>
-
+				<Box>
+					<a href="/profile">Profile</a>
+				</Box>
+				<Box>
+					<a href="/address">Address</a>
+				</Box>
+				<Box>
+					<a href="/network">Network</a>
+				</Box>
 				<Box>
 					<ConnectButton />
 				</Box>
