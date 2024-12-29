@@ -10,6 +10,7 @@ import { getObjectFields, shortAddress } from "./utils";
 import { TB_TYPE, TESTNET_COUNTER_FUND_ID } from "./constants";
 import { makeError } from "./error";
 import type { WalletAccount } from '@mysten/wallet-standard';
+import TextInputDialog from "./TextInputDialog";
 
 export function Profile(
     { currentAccount, }: { currentAccount: WalletAccount }
@@ -33,8 +34,34 @@ export function Profile(
     const [profileNotFound, setProfileNotFound] = useState(false);
     const [xchgAddressToAdd, setXchgAddressToAdd] = useState("");
     const [withdrawAmount, setWithdrawAmount] = useState("0");
+    const [sponsorLimitPerDay, setSponsorLimitPerDay] = useState("86400000");
 
-    console.log("Current Account: ", currentAccount);
+    ///////////////////////////////////////////////////////////////
+    // Dialog
+    const [isDialogOpen, setDialogOpen] = useState(false);
+    const [submittedText, setSubmittedText] = useState('');
+    const [dialogHeader, setDialogHeader] = useState('');
+    
+    const [dialogData, setDialogData] = useState('');
+    const [dialogType, setDialogType] = useState('');
+    
+    const handleOpenDialog = () => setDialogOpen(true);
+    const handleCloseDialog = () => setDialogOpen(false);
+    const handleSubmit = (value: string) => {
+        setSubmittedText(value);
+
+        if (dialogType === "updateSponsoring") {
+            let valueAsNumber = parseFloat(value);
+            if (isNaN(valueAsNumber)) {
+                alert("Invalid number");
+                return;
+            }
+            updateSponsoring(dialogData, valueAsNumber);
+        }
+    }
+    ///////////////////////////////////////////////////////////////
+
+    // console.log("Current Account: ", currentAccount);
 
     useEffect(() => {
         if (!profileLoaded) {
@@ -545,9 +572,56 @@ export function Profile(
             arguments: [
                 tx.object(TESTNET_COUNTER_FUND_ID),
                 tx.pure.address(xchgAddr),
-                tx.pure.u64(10000000000),
+                tx.pure.u64(86400000),
             ],
             target: `${counterPackageId}::fund::becomeSponsor`,
+        });
+
+        signAndExecute(
+            {
+                transaction: tx,
+            },
+            {
+                onSuccess: async ({ digest }) => {
+                    const { effects } = await suiClient.waitForTransaction({
+                        digest: digest,
+                        options: {
+                            showEffects: true,
+                            showRawEffects: true,
+                        },
+                    });
+                    console.log("Effects: ", effects);
+                    reloadProfile();
+                    alert("OK");
+                },
+                onError: (error) => {
+                    alert("Error: " + error);
+                }
+
+            },
+        );
+    }
+
+    const updateSponsoringDialog = async (xchgAddr: string) => {
+        setDialogData(xchgAddr);
+        setDialogType("updateSponsoring");
+        setDialogHeader("Update Sponsor");
+        handleOpenDialog();
+    }
+
+    const updateSponsoring = async (xchgAddr: string, limit: number) => {
+        if (!currentAccount) {
+            return;
+        }
+
+        const tx = new Transaction();
+        tx.moveCall({
+            arguments: [
+                tx.object(TESTNET_COUNTER_FUND_ID),
+                tx.pure.address(xchgAddr),
+                tx.pure.u64(limit),
+            ],
+            target: `${counterPackageId}::fund::updateSponsor`,
         });
 
         signAndExecute(
@@ -693,7 +767,9 @@ export function Profile(
                                                     <Flex>SUI Address: {sponsorItem.suiAddr}</Flex>
                                                     <Flex>Last Operation: {sponsorItem.lastOperation}</Flex>
                                                     <Flex>Virtual Balance: {sponsorItem.virutalBalance}</Flex>
-                                                    <Flex>Limit Per Day: {sponsorItem.limitPerDay}</Flex>
+                                                    <Flex>Limit Per Day: {sponsorItem.limitPerDay}
+                                                        <Button onClick={() => updateSponsoringDialog(item.xchgAddr)}>UPDATE</Button>
+                                                    </Flex>
                                                 </Flex>
                                             ))}
                                         </Flex>
@@ -721,6 +797,18 @@ export function Profile(
                     <hr />
                     <hr />
                     <Button onClick={() => getProfileObject()}>GET STATE</Button>
+
+                    <div style={{ padding: '20px' }}>
+                        <button onClick={handleOpenDialog}>Open Dialog</button>
+                        <p>Submitted Text: {submittedText}</p>
+                        <TextInputDialog
+                            isOpen={isDialogOpen}
+                            header={dialogHeader}
+                            onClose={handleCloseDialog}
+                            onSubmit={handleSubmit}
+                        />
+                    </div>
+
 
                 </Flex>
             }
