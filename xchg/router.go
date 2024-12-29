@@ -86,7 +86,7 @@ func CreateChequesIDs(routerXchgAddress string) {
 	priKey := signerAccount.PriKey
 	fmt.Printf("signerAccount.Address: %s\n", signerAccount.Address)
 
-	gasObj := "0x243c646af72b7e43fd38d7bdb13c0679ad0f8e270221a93bddc99fb9f93a3360"
+	gasObj := "0xd0c23ecbcb9e8997a1d22d220ed9c28beb93596dc9a310316a49acd0d7a3d6c5"
 
 	rsp, err := cli.MoveCall(ctx, models.MoveCallRequest{
 		Signer:          signerAccount.Address,
@@ -141,7 +141,7 @@ func ApplyCheque(chequeID string) {
 	priKey := signerAccount.PriKey
 	fmt.Printf("signerAccount.Address: %s\n", signerAccount.Address)
 
-	gasObj := "0x243c646af72b7e43fd38d7bdb13c0679ad0f8e270221a93bddc99fb9f93a3360"
+	gasObj := "0xd0c23ecbcb9e8997a1d22d220ed9c28beb93596dc9a310316a49acd0d7a3d6c5"
 	xchgMsg := make([]byte, 104)
 
 	chequeIDBytes, _ := hex.DecodeString(chequeID[2:])

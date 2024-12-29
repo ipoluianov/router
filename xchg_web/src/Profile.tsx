@@ -32,6 +32,7 @@ export function Profile(
 
     const [profileNotFound, setProfileNotFound] = useState(false);
     const [xchgAddressToAdd, setXchgAddressToAdd] = useState("");
+    const [withdrawAmount, setWithdrawAmount] = useState("0");
 
     console.log("Current Account: ", currentAccount);
 
@@ -50,6 +51,7 @@ export function Profile(
     interface XchgAddrObject {
         balance: string,
         ownerSuiAddr: string,
+        sponsors: SponsorXchgAddress[]
     }
 
     interface FavotiveXchgAddress {
@@ -59,6 +61,20 @@ export function Profile(
         balance: string,
         xchgAddr: string,
         xchgAddrObject: XchgAddrObject,
+    }
+
+    /*
+       limitPerDay: u64,
+    virtualBalance : u64,
+    lastOperation: u64,
+    suiAddr: address, 
+    */
+
+    interface SponsorXchgAddress {
+        suiAddr: string,
+        lastOperation: string,
+        virutalBalance: string,
+        limitPerDay: string,
     }
 
     const prepareCoin = async (account: WalletAccount, tx: Transaction, coinType: string, amount: bigint): (Promise<TransactionResult | DError>) => {
@@ -143,7 +159,6 @@ export function Profile(
         balance: string,
         favoriteXchgAddresses: FavotiveXchgAddress[],
         own_routers: string[],
-        sponsoredXchgAddresses: string[],
     }
 
     const getXchgAddressObject = async (xchgAddr: string) => {
@@ -168,10 +183,31 @@ export function Profile(
         fields = fields.value.fields;
         console.log("Xchg Address Fields: ", fields);
 
+        let sponsors: SponsorXchgAddress[] = [];
+
+        if (fields.sponsors != null) {
+
+            for (let i = 0; i < fields.sponsors.length; i++) {
+                let item = fields.sponsors[i];
+
+                let sponsorItem: SponsorXchgAddress = {
+                    suiAddr: item.fields.suiAddr,
+                    lastOperation: item.fields.lastOperation,
+                    virutalBalance: item.fields.virtualBalance,
+                    limitPerDay: item.fields.limitPerDay,
+                }
+
+                sponsors.push(sponsorItem);
+            }
+        }
+
         let xcgfAddrObject: XchgAddrObject = {
             balance: fields.balance,
             ownerSuiAddr: fields.ownerSuiAddr,
+            sponsors: sponsors,
         }
+
+        console.log("XCHG_ADDR_OBJECT: ", xcgfAddrObject);
 
         return xcgfAddrObject;
     }
@@ -382,9 +418,11 @@ export function Profile(
             return;
         }
 
+        let withdrawAmountNumber = parseFloat(withdrawAmount);
+
         const tx = new Transaction();
         tx.moveCall({
-            arguments: [tx.object(TESTNET_COUNTER_FUND_ID), tx.pure.u64(50)],
+            arguments: [tx.object(TESTNET_COUNTER_FUND_ID), tx.pure.u64(withdrawAmountNumber)],
             target: `${counterPackageId}::fund::withdrawFromProfile`,
         });
 
@@ -507,6 +545,7 @@ export function Profile(
             arguments: [
                 tx.object(TESTNET_COUNTER_FUND_ID),
                 tx.pure.address(xchgAddr),
+                tx.pure.u64(10000000000),
             ],
             target: `${counterPackageId}::fund::becomeSponsor`,
         });
@@ -546,7 +585,7 @@ export function Profile(
             arguments: [
                 tx.object(TESTNET_COUNTER_FUND_ID),
                 tx.pure.address(xchgAddr),
-            ],  
+            ],
             target: `${counterPackageId}::fund::stopSponsor`,
         });
 
@@ -617,17 +656,24 @@ export function Profile(
                             <Flex direction='row' style={{ backgroundColor: '#333' }}>
                                 <Flex style={{ fontSize: '24pt' }}>{displayXchgBalance(profileState.balance)} bytes</Flex>
                                 <Flex flexGrow='1'></Flex>
+                                <input
+                                    placeholder="Amount to withdraw"
+                                    style={{ width: '200px' }}
+                                    value={withdrawAmount}
+                                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                                >
+                                </input>
                                 <Button onClick={() => removeStake()}>WITHDRAW</Button>
                             </Flex>
                         </Flex>
                         <Flex direction='column'>
                             <Flex style={{ fontSize: '24pt' }}>My Favorites:</Flex>
                             <Flex direction='row'>
-                                <input 
-                                placeholder="XCHG address"
-                                style={{ width: '300px' }}
-                                value={xchgAddressToAdd}
-                                onChange={(e) => setXchgAddressToAdd(e.target.value)}
+                                <input
+                                    placeholder="XCHG address"
+                                    style={{ width: '300px' }}
+                                    value={xchgAddressToAdd}
+                                    onChange={(e) => setXchgAddressToAdd(e.target.value)}
                                 >
                                 </input>
                                 <Button onClick={() => addFavoriteXchgAddress()}>ADD</Button>
@@ -635,11 +681,22 @@ export function Profile(
 
                             <Flex direction="column">
                                 {profileState.favoriteXchgAddresses.map((item, index) => (
-                                    <Flex key={index} style={{ borderTop: '1px solid #DDD' }} direction='column'>
+                                    <Flex key={item.xchgAddr + "_" + index} style={{ borderTop: '1px solid #DDD' }} direction='column'>
                                         <Flex>XCHG Address: {item.xchgAddr}</Flex>
                                         <Flex>Group: {item.group}</Flex>
                                         <Flex>Description: {item.description}</Flex>
                                         <Flex>Balance: {item.balance}</Flex>
+                                        <Flex key={item.xchgAddr + "_" + index + "_sponsors"}>
+                                            <Flex key={item.xchgAddr + "_" + index + "_sponsors_header"}>SPONSORS:</Flex>
+                                            {item.xchgAddrObject != null && item.xchgAddrObject.sponsors.map((sponsorItem, index) => (
+                                                <Flex key={item.xchgAddr + "_sponsor_" + index} style={{ borderTop: '1px solid #DDD' }} direction='column'>
+                                                    <Flex>SUI Address: {sponsorItem.suiAddr}</Flex>
+                                                    <Flex>Last Operation: {sponsorItem.lastOperation}</Flex>
+                                                    <Flex>Virtual Balance: {sponsorItem.virutalBalance}</Flex>
+                                                    <Flex>Limit Per Day: {sponsorItem.limitPerDay}</Flex>
+                                                </Flex>
+                                            ))}
+                                        </Flex>
                                         <Flex>
                                             <Button onClick={() => removeFavoriteXchgAddress(item.xchgAddr)}>REMOVE</Button>
                                             <Button onClick={() => depositToXchgAddress(item.xchgAddr)}>DEPOSIT TO ADDRESS</Button>
@@ -655,7 +712,7 @@ export function Profile(
                     </Flex>
 
                     <Flex>
-                    0x5ded23a41eb84ec1f95b27d14222155f145a45e76a6377ae9cfcf754a4da9956
+                        0x5ded23a41eb84ec1f95b27d14222155f145a45e76a6377ae9cfcf754a4da9956
                     </Flex>
 
                     <hr />

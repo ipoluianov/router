@@ -222,22 +222,25 @@ public fun depositToProfile(f: &mut Fund, payment: Coin<tbtoken::tb::TB>, ctx: &
 // Deposit to the XCHG address
 public fun depositToXchgAddr(f: &mut Fund, xchgAddr: address, payment: Coin<tbtoken::tb::TB>, ctx: &mut TxContext) {
     let value = payment.value();
+    let xchgAddress = get_xchg_address(f, xchgAddr, ctx.sender());
+    xchgAddress.balance = xchgAddress.balance + value;
+    coin::put(&mut f.balance, payment);
+}
+
+fun get_xchg_address(f: &mut Fund, xchgAddr: address, ownerSuiAddr: address) : &mut XchgAddress {
     if (!f.addresses.contains(xchgAddr)) {
         let xchgAddress = XchgAddress {
             xchgAddr: xchgAddr,
             sponsors: vector[],
-            balance: value,
-            ownerSuiAddr: ctx.sender(),
+            balance: 0,
+            ownerSuiAddr: ownerSuiAddr,
             spentTrafficKb: 0,
             routerWithdrawCount: 0,
             routerWithdrawAmount: 0,
         };
         f.addresses.add(xchgAddr, xchgAddress);
-    } else {
-        let xchgAddress = f.addresses.borrow_mut(xchgAddr);
-        xchgAddress.balance = xchgAddress.balance + value;
     };
-    coin::put(&mut f.balance, payment);
+    return f.addresses.borrow_mut(xchgAddr)
 }
 
 // Set owner address only if it is not set or current owner is the same as the sender
@@ -283,43 +286,93 @@ public fun removeFavoriteXchgAddress(f: &mut Fund, xchgAddr: address, ctx: &mut 
     };
 }
 
-public fun becomeSponsor(f: &mut Fund, xchgAddr: address, ctx: &mut TxContext) {
-    assert!(f.profiles.contains(ctx.sender()), ERR_XCHG_APP_ADDR_NOT_FOUND);
-    let profile = f.profiles.borrow_mut(ctx.sender());
-    assert!(f.addresses.contains(xchgAddr), ERR_XCHG_ADDR_NOT_FOUND);
-    assert!(!profile.sponsoredXchgAddresses.contains(&xchgAddr), ERR_XCHG_ADDR_NOT_FOUND);
-    let addr = f.addresses.borrow_mut(xchgAddr);
+public fun becomeSponsor(f: &mut Fund, xchgAddr: address, limPerDay: u64, ctx: &mut TxContext) {
+    let addr = get_xchg_address(f, xchgAddr, ctx.sender());
+
+    // Check if already sponsor
+    let mut i = 0;
+    while (i < addr.sponsors.length()) {
+        if (addr.sponsors[i].suiAddr == ctx.sender()) {
+            assert!(false, ERR_XCHG_ADDR_NOT_FOUND);
+        };
+        i = i + 1;
+    };
+
+    // Add sponsor to address
     let sponsor = Sponsor {
-        limitPerDay: 1000,
-        virtualBalance: 1000,
+        limitPerDay: limPerDay,
+        virtualBalance: limPerDay,
         lastOperation: 0,
         suiAddr: ctx.sender(),
     };
     addr.sponsors.push_back(sponsor);
+
+    // Add sponsored address to profile
+    let profile = internal_get_profile(f, ctx.sender(), ctx);
+    profile.sponsoredXchgAddresses.push_back(xchgAddr);
 }
 
-public fun stopSponsor(f: &mut Fund, xchgAddr: address, ctx: &mut TxContext) {
-    assert!(f.profiles.contains(ctx.sender()), ERR_XCHG_APP_ADDR_NOT_FOUND);
-    let profile = f.profiles.borrow_mut(ctx.sender());
+public fun updateSponsor(f: &mut Fund, xchgAddr: address, limPerDay: u64, ctx: &mut TxContext) {
+    // Check if XCHG address exists
     assert!(f.addresses.contains(xchgAddr), ERR_XCHG_ADDR_NOT_FOUND);
-    assert!(profile.sponsoredXchgAddresses.contains(&xchgAddr), ERR_XCHG_ADDR_NOT_FOUND);
     let addr = f.addresses.borrow_mut(xchgAddr);
+
+    // Find sponsor record
+    let mut addrSponsorsIndex: u64 = addr.sponsors.length();
     let mut i = 0;
     while (i < addr.sponsors.length()) {
         if (addr.sponsors[i].suiAddr == ctx.sender()) {
-            addr.sponsors.remove(i);
+            addrSponsorsIndex = i;
             break
         };
         i = i + 1;
     };
+
+    // Check if sponsor record found
+    assert!(addrSponsorsIndex < addr.sponsors.length(), ERR_XCHG_ADDR_NOT_FOUND);
+
+    // Update sponsor record
+    addr.sponsors[addrSponsorsIndex].limitPerDay = limPerDay;
+    addr.sponsors[addrSponsorsIndex].virtualBalance = limPerDay;
+}
+
+public fun stopSponsor(f: &mut Fund, xchgAddr: address, ctx: &mut TxContext) {
+    assert!(f.profiles.contains(ctx.sender()), ERR_XCHG_APP_ADDR_NOT_FOUND); // No profile found
+    let profile = f.profiles.borrow_mut(ctx.sender()); // Get Profile
+    assert!(f.addresses.contains(xchgAddr), ERR_XCHG_ADDR_NOT_FOUND); // No XCHG address found
+    let addr = f.addresses.borrow_mut(xchgAddr); // Get XCHG address
+    
+    // Find sponsor record in the XCHG address
+    let mut addrSponsorsIndex: u64 = addr.sponsors.length();
+
+    let mut i = 0;
+    while (i < addr.sponsors.length()) {
+        if (addr.sponsors[i].suiAddr == ctx.sender()) {
+            addrSponsorsIndex = i;
+            break
+        };
+        i = i + 1;
+    };
+
+    // Find sponsor record in the profile
+    let mut profileSponsoredXchgAddressesIndex: u64 = profile.sponsoredXchgAddresses.length();
+    
     i = 0;
     while (i < profile.sponsoredXchgAddresses.length()) {
         if (profile.sponsoredXchgAddresses[i] == xchgAddr) {
-            profile.sponsoredXchgAddresses.remove(i);
+            profileSponsoredXchgAddressesIndex = i;
             break
         };
         i = i + 1;
     };
+
+    // Check if sponsor record found
+    assert!(addrSponsorsIndex < addr.sponsors.length(), ERR_XCHG_ADDR_NOT_FOUND);
+    assert!(profileSponsoredXchgAddressesIndex < profile.sponsoredXchgAddresses.length(), ERR_XCHG_ADDR_NOT_FOUND);
+
+    // Remove sponsor records
+    addr.sponsors.remove(addrSponsorsIndex);
+    profile.sponsoredXchgAddresses.remove(profileSponsoredXchgAddressesIndex);
 }
 
 public fun modifyFavoriteXchgAddress(f: &mut Fund, xchgAddr: address, name: String, group: String, description: String, ctx: &mut TxContext) {
@@ -434,13 +487,6 @@ public fun apply_cheque(f: &mut Fund, pk: vector<u8>,  msg: vector<u8>, sig: vec
             i = i + 1;
         };
 
-        // Parse Amount Little Endian
-        event::emit(LogEvent{ text: string::utf8(b"Parsed amount"), num: amount});
-
-        event::emit(LogEvent{ text: string::utf8(b"Parsed amount 1"), num: msg[96] as u64});
-        event::emit(LogEvent{ text: string::utf8(b"Parsed amount 2"), num: msg[97] as u64});
-
-
         // Check cheque ID
         let checkIdAsAddr = address::from_bytes(vChequeId);
         let routerAddr = address::from_bytes(vRouterAddr);
@@ -466,7 +512,7 @@ public fun apply_cheque(f: &mut Fund, pk: vector<u8>,  msg: vector<u8>, sig: vec
             return
         };
 
-        event::emit(LogEvent{ text: string::utf8(b"Cheque applied"), num: amount});
+        event::emit(LogEvent{ text: string::utf8(b"apply_cheque amount"), num: amount});
 
         // Cheque cancellation
         router.chequeIds.remove(&checkIdAsAddr);
@@ -477,35 +523,56 @@ public fun apply_cheque(f: &mut Fund, pk: vector<u8>,  msg: vector<u8>, sig: vec
         let amountToDeveloper = amountOnePercent * 20;
         let mut amountToFund = amount;
 
-        event::emit(LogEvent{ text: string::utf8(b"Cheque applied"), num: amountOnePercent});
-        event::emit(LogEvent{ text: string::utf8(b"to router"), num: amountToRouter});
-        event::emit(LogEvent{ text: string::utf8(b"to dev"), num: amountToDeveloper});
-
         let xchgClient = f.addresses.borrow_mut(clientAddr);
         
         // get money from sponsors
         let mut i = 0;
         while (i < xchgClient.sponsors.length()) {
             // Prepare data
-            let sponsorAddr = xchgClient.sponsors[i].suiAddr;
-            let sponsorProfile = f.profiles.borrow_mut(sponsorAddr);
+            let sponsorSuiAddr = xchgClient.sponsors[i].suiAddr;
+            let sponsorProfile = f.profiles.borrow_mut(sponsorSuiAddr);
             let mut sponsorVirtualBalance = xchgClient.sponsors[i].virtualBalance;
             let currentTime = clock.timestamp_ms();
             let lastOperation = xchgClient.sponsors[i].lastOperation;
             let limitPerDay = xchgClient.sponsors[i].limitPerDay;
 
             // Calc new virtual balance of sponsor 
-            let balanceToAdd = (currentTime - lastOperation)  * limitPerDay / 86400000;
-            sponsorVirtualBalance = sponsorVirtualBalance + balanceToAdd;
+            let deltaTime = currentTime - lastOperation;
+            let mut balanceToAdd: u256 = ((currentTime - lastOperation) as u256)  * (limitPerDay as u256) / 86400000;
+            let maxBalanceToAdd: u256 = 1_000_000_000_000;
+            if (balanceToAdd > maxBalanceToAdd) {
+                balanceToAdd = maxBalanceToAdd;
+            };
+            let balanceToAddU64 = balanceToAdd as u64;
+
+            event::emit(LogEvent{ text: string::utf8(b"sponsor - sponsorVirtualBalance"), num: sponsorVirtualBalance});
+            event::emit(LogEvent{ text: string::utf8(b"sponsor - deltaTime"), num: deltaTime});
+            event::emit(LogEvent{ text: string::utf8(b"sponsor - balanceToAddU64"), num: balanceToAddU64});
+
+
+            sponsorVirtualBalance = sponsorVirtualBalance + balanceToAddU64;
             if (sponsorVirtualBalance > limitPerDay) {
                 sponsorVirtualBalance = limitPerDay;
             };
 
+            event::emit(LogEvent{ text: string::utf8(b"sponsor - sponsorVirtualBalance after chech"), num: sponsorVirtualBalance});
+
+            if (sponsorProfile.balance < sponsorVirtualBalance) {
+                sponsorVirtualBalance = sponsorProfile.balance;
+            };
+
+            event::emit(LogEvent{ text: string::utf8(b"sponsor - sponsorVirtualBalance afetr check 2"), num: sponsorVirtualBalance});
+
             if (sponsorVirtualBalance >= amount) {
+                event::emit(LogEvent{ text: string::utf8(b"sponsor - sponsorVirtualBalance - amount"), num: amount});
+
                 xchgClient.sponsors[i].virtualBalance = sponsorVirtualBalance - amount;
+                xchgClient.sponsors[i].lastOperation = currentTime;
+
                 sponsorProfile.balance = sponsorProfile.balance - amount;
                 xchgClient.balance = xchgClient.balance + amount;
-                event::emit(LogEvent{ text: string::utf8(b"get from sponsor"), num: xchgClient.balance});
+
+                event::emit(LogEvent{ text: string::utf8(b"got from sponsor"), num: xchgClient.balance});
                 break
             };
             i = i + 1;
@@ -514,19 +581,19 @@ public fun apply_cheque(f: &mut Fund, pk: vector<u8>,  msg: vector<u8>, sig: vec
         // Try to transfer funds to the router owner
         let routerSUIAddress = router.owner;
         if (f.profiles.contains(routerSUIAddress)) {
-            let xchgAddress = f.addresses.borrow_mut(clientAddr);
+            //let xchgAddress = f.addresses.borrow_mut(clientAddr);
             let routerProfile = f.profiles.borrow_mut(routerSUIAddress);
-            if (xchgAddress.balance >= amountToRouter) {
-                xchgAddress.balance = xchgAddress.balance - amountToRouter;
+            if (xchgClient.balance >= amountToRouter) {
+                xchgClient.balance = xchgClient.balance - amountToRouter;
                 routerProfile.balance = routerProfile.balance + amountToRouter;
                 amountToFund = amountToFund - amountToRouter;
                 event::emit(LogEvent{ text: string::utf8(b"transfered to router"), num: amountToRouter});
 
             } else {
-                routerProfile.balance = routerProfile.balance + xchgAddress.balance;
-                amountToFund = amountToFund - xchgAddress.balance;
-                event::emit(LogEvent{ text: string::utf8(b"transfered to router all in"), num: xchgAddress.balance});
-                xchgAddress.balance = 0;
+                routerProfile.balance = routerProfile.balance + xchgClient.balance;
+                amountToFund = amountToFund - xchgClient.balance;
+                event::emit(LogEvent{ text: string::utf8(b"transfered to router all in"), num: xchgClient.balance});
+                xchgClient.balance = 0;
             };
         };
 
@@ -548,10 +615,13 @@ public fun apply_cheque(f: &mut Fund, pk: vector<u8>,  msg: vector<u8>, sig: vec
             }
         };
 
-        event::emit(LogEvent{ text: string::utf8(b"transfered to common fund"), num: amountToFund});
-        f.commonFund = f.commonFund + amountToFund;
         let xchgAddress = f.addresses.borrow_mut(clientAddr);
+        if (xchgAddress.balance < amountToFund) {
+            amountToFund = xchgAddress.balance;
+        };
+        f.commonFund = f.commonFund + amountToFund;
         xchgAddress.balance = xchgAddress.balance - amountToFund;
+        event::emit(LogEvent{ text: string::utf8(b"transfered to common fund"), num: amountToFund});
 
         f.counter = f.counter + 1;
     };
