@@ -12,6 +12,8 @@ import { makeError } from "./error";
 import type { WalletAccount } from '@mysten/wallet-standard';
 import TextInputDialog from "./TextInputDialog";
 import EditFavoriteXchgAddressDialog from "./EditFavoriteXchgAddressDialog";
+import ProfileWithdrawDialog from "./ProfileWithdrawDialog";
+import ProfileDepositDialog from "./ProfileDepositDialog";
 
 export function Profile(
     { currentAccount, }: { currentAccount: WalletAccount }
@@ -33,17 +35,16 @@ export function Profile(
     const [profileState, setProfileState] = useState(defaultProfileState);
 
     const [profileNotFound, setProfileNotFound] = useState(false);
-    const [withdrawAmount, setWithdrawAmount] = useState("0");
 
     ///////////////////////////////////////////////////////////////
     // Dialog
     const [isDialogOpen, setDialogOpen] = useState(false);
     const [submittedText, setSubmittedText] = useState('');
     const [dialogHeader, setDialogHeader] = useState('');
-    
+
     const [dialogData, setDialogData] = useState('');
     const [dialogType, setDialogType] = useState('');
-    
+
     const handleOpenDialog = () => setDialogOpen(true);
     const handleCloseDialog = () => setDialogOpen(false);
     const handleSubmit = (value: string) => {
@@ -78,6 +79,42 @@ export function Profile(
     const updateFavDialog = (xchgAddr: string) => {
         setDialogData(xchgAddr);
         handleOpenEditFavoriteXchgAddressDialog();
+    }
+    ///////////////////////////////////////////////////////////////
+
+    ///////////////////////////////////////////////////////////////
+    // ProfileWithdrawDialog
+    const [isProfileWithdrawDialogOpen, setProfileWithdrawDialogOpen] = useState(false);
+    const handleOpenProfileWithdrawDialog = () => setProfileWithdrawDialogOpen(true);
+    const handleCloseProfileWithdrawDialog = () => setProfileWithdrawDialogOpen(false);
+    const handleSubmitProfileWithdrawDialog = (amount: string) => {
+        let amountAsNumber = parseFloat(amount);
+        if (isNaN(amountAsNumber)) {
+            alert("Invalid number");
+            return;
+        }
+        profileWithdraw(amountAsNumber);
+    }
+    const profileWithdrawDialog = () => {
+        handleOpenProfileWithdrawDialog();
+    }
+    ///////////////////////////////////////////////////////////////
+
+    ///////////////////////////////////////////////////////////////
+    // ProfileDepositDialog
+    const [isProfileDepositDialogOpen, setProfileDepositDialogOpen] = useState(false);
+    const handleOpenProfileDepositDialog = () => setProfileDepositDialogOpen(true);
+    const handleCloseProfileDepositDialog = () => setProfileDepositDialogOpen(false);
+    const handleSubmitProfileDepositDialog = (amount: string) => {
+        let amountAsNumber = parseFloat(amount);
+        if (isNaN(amountAsNumber)) {
+            alert("Invalid number");
+            return;
+        }
+        profileDeposit(amountAsNumber);
+    }
+    const profileDepositDialog = () => {
+        handleOpenProfileDepositDialog();
     }
     ///////////////////////////////////////////////////////////////
 
@@ -369,14 +406,16 @@ export function Profile(
         );
     }
 
-    const depositToProfile = async () => {
+    const profileDeposit = async (amount: number) => {
         if (!currentAccount) {
             return;
         }
 
         const tx = new Transaction();
 
-        const coin = await prepareCoin(currentAccount, tx, TB_TYPE, 10000000000n);
+        let amountBigInt = BigInt(amount);
+
+        const coin = await prepareCoin(currentAccount, tx, TB_TYPE, amountBigInt);
         console.log('coin', coin);
         // if coin is a DError
         if ('errorMessage' in coin) {
@@ -460,16 +499,14 @@ export function Profile(
         );
     }
 
-    const removeStake = async () => {
+    const profileWithdraw = async (amount: number) => {
         if (!currentAccount) {
             return;
         }
 
-        let withdrawAmountNumber = parseFloat(withdrawAmount);
-
         const tx = new Transaction();
         tx.moveCall({
-            arguments: [tx.object(TESTNET_COUNTER_FUND_ID), tx.pure.u64(withdrawAmountNumber)],
+            arguments: [tx.object(TESTNET_COUNTER_FUND_ID), tx.pure.u64(amount)],
             target: `${counterPackageId}::fund::withdrawFromProfile`,
         });
 
@@ -486,7 +523,7 @@ export function Profile(
                             showRawEffects: true,
                         },
                     });
-
+                    reloadProfile();
                     alert("OK");
                 },
                 onError: (error) => {
@@ -634,7 +671,7 @@ export function Profile(
         );
     }
 
-    
+
     const startSponsoring = async (xchgAddr: string) => {
         if (!currentAccount) {
             return;
@@ -768,7 +805,10 @@ export function Profile(
     const displayXchgBalance = (balanceStr: string) => {
         return parseFloat(balanceStr);
     }
-
+    
+    const copyTextToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text);
+    }
 
     return (
         <>
@@ -792,25 +832,21 @@ export function Profile(
                 <Flex direction="column" gap="2">
                     <Flex>
                         {currentAccount.address}
+                        <Button onClick={() => copyTextToClipboard(currentAccount.address)}>COPY</Button>
+                        <Flex flexGrow='1'></Flex>
+                        <Button onClick={() => getProfileObject()}>GET STATE</Button>
                     </Flex>
                     <Flex direction="column" gap="2">
                         <Flex direction='column'>
                             <Flex direction='row' style={{ backgroundColor: '#333' }}>
                                 <Flex style={{ fontSize: '24pt' }}>BALANCE</Flex>
                                 <Flex flexGrow='1'></Flex>
-                                <Button onClick={() => depositToProfile()}>DEPOSIT</Button>
+                                <Button onClick={() => profileDepositDialog()}>DEPOSIT</Button>
                             </Flex>
                             <Flex direction='row' style={{ backgroundColor: '#333' }}>
                                 <Flex style={{ fontSize: '24pt' }}>{displayXchgBalance(profileState.balance)} bytes</Flex>
                                 <Flex flexGrow='1'></Flex>
-                                <input
-                                    placeholder="Amount to withdraw"
-                                    style={{ width: '200px' }}
-                                    value={withdrawAmount}
-                                    onChange={(e) => setWithdrawAmount(e.target.value)}
-                                >
-                                </input>
-                                <Button onClick={() => removeStake()}>WITHDRAW</Button>
+                                <Button onClick={() => profileWithdrawDialog()}>WITHDRAW</Button>
                             </Flex>
                         </Flex>
                         <Flex direction='column'>
@@ -821,9 +857,9 @@ export function Profile(
 
                             <Flex direction="column">
                                 {profileState.favoriteXchgAddresses.map((item, index) => (
-                                    <Flex key={item.xchgAddr + "_" + index} 
-                                    style={{ border: '1px solid #55F', margin: '10px', padding: '10px' }} 
-                                    direction='column'>
+                                    <Flex key={item.xchgAddr + "_" + index}
+                                        style={{ border: '1px solid #55F', margin: '10px', padding: '10px' }}
+                                        direction='column'>
                                         <Flex>XCHG Address: {item.xchgAddr}</Flex>
                                         <Flex>Name: {item.name}</Flex>
                                         <Flex>Group: {item.group}</Flex>
@@ -864,26 +900,29 @@ export function Profile(
                     </Flex>
 
                     <hr />
-                    <hr />
-                    <hr />
-                    <hr />
-                    <hr />
-                    <Button onClick={() => getProfileObject()}>GET STATE</Button>
 
-                    <div style={{ padding: '20px' }}>
-                        <button onClick={handleOpenDialog}>Open Dialog</button>
-                        <p>Submitted Text: {submittedText}</p>
-                        <TextInputDialog
-                            isOpen={isDialogOpen}
-                            header={dialogHeader}
-                            onClose={handleCloseDialog}
-                            onSubmit={handleSubmit}
-                        />
-                    </div>
+                    <TextInputDialog
+                        isOpen={isDialogOpen}
+                        header={dialogHeader}
+                        onClose={handleCloseDialog}
+                        onSubmit={handleSubmit}
+                    />
                     <EditFavoriteXchgAddressDialog
                         isOpen={isEditFavoriteXchgAddressDialogOpen}
                         onClose={handleCloseEditFavoriteXchgAddressDialog}
                         onSubmit={handleSubmitEditFavoriteXchgAddressDialog}
+                    />
+
+                    <ProfileWithdrawDialog
+                        isOpen={isProfileWithdrawDialogOpen}
+                        onClose={handleCloseProfileWithdrawDialog}
+                        onSubmit={handleSubmitProfileWithdrawDialog}
+                    />
+
+                    <ProfileDepositDialog
+                        isOpen={isProfileDepositDialogOpen}
+                        onClose={handleCloseProfileDepositDialog}
+                        onSubmit={handleSubmitProfileDepositDialog}
                     />
 
                 </Flex>
