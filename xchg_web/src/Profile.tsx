@@ -11,6 +11,7 @@ import { TB_TYPE, TESTNET_COUNTER_FUND_ID } from "./constants";
 import { makeError } from "./error";
 import type { WalletAccount } from '@mysten/wallet-standard';
 import TextInputDialog from "./TextInputDialog";
+import EditFavoriteXchgAddressDialog from "./EditFavoriteXchgAddressDialog";
 
 export function Profile(
     { currentAccount, }: { currentAccount: WalletAccount }
@@ -32,9 +33,7 @@ export function Profile(
     const [profileState, setProfileState] = useState(defaultProfileState);
 
     const [profileNotFound, setProfileNotFound] = useState(false);
-    const [xchgAddressToAdd, setXchgAddressToAdd] = useState("");
     const [withdrawAmount, setWithdrawAmount] = useState("0");
-    const [sponsorLimitPerDay, setSponsorLimitPerDay] = useState("86400000");
 
     ///////////////////////////////////////////////////////////////
     // Dialog
@@ -58,6 +57,27 @@ export function Profile(
             }
             updateSponsoring(dialogData, valueAsNumber);
         }
+
+        if (dialogType === "addFavoriteXchgAddress") {
+            //alert("Add Favorite Xchg Address: " + value);
+            addFavoriteXchgAddress(value);
+        }
+    }
+    ///////////////////////////////////////////////////////////////
+
+    ///////////////////////////////////////////////////////////////
+    // EditFavoriteXchgAddressDialog
+    const [isEditFavoriteXchgAddressDialogOpen, setEditFavoriteXchgAddressDialogOpen] = useState(false);
+    const handleOpenEditFavoriteXchgAddressDialog = () => setEditFavoriteXchgAddressDialogOpen(true);
+    const handleCloseEditFavoriteXchgAddressDialog = () => setEditFavoriteXchgAddressDialogOpen(false);
+    const handleSubmitEditFavoriteXchgAddressDialog = (name: string, group: string, description: string) => {
+        let xchgAddr = dialogData;
+        alert(xchgAddr + " Name: " + name + ", Group: " + group + ", Description: " + description);
+        updateFavoriteXchgAddress(xchgAddr, name, group, description);
+    }
+    const updateFavDialog = (xchgAddr: string) => {
+        setDialogData(xchgAddr);
+        handleOpenEditFavoriteXchgAddressDialog();
     }
     ///////////////////////////////////////////////////////////////
 
@@ -477,7 +497,13 @@ export function Profile(
         );
     }
 
-    const addFavoriteXchgAddress = async () => {
+    const addFavoriteXchgAddressDialog = () => {
+        setDialogType("addFavoriteXchgAddress");
+        setDialogHeader("Add Favorite Xchg Address");
+        handleOpenDialog();
+    }
+
+    const addFavoriteXchgAddress = async (xchgAddr: string) => {
         if (!currentAccount) {
             return;
         }
@@ -486,7 +512,7 @@ export function Profile(
 
         //let xchgAddr = "0x000102030405060708090A0B0C0D0E0F000102030405060708090A0B0C0D0E0F"
 
-        let xchgAddr = xchgAddressToAdd;
+        //let xchgAddr = xchgAddressToAdd;
         tx.moveCall({
             arguments: [
                 tx.object(TESTNET_COUNTER_FUND_ID),
@@ -496,6 +522,52 @@ export function Profile(
                 tx.pure.string("description"),
             ],
             target: `${counterPackageId}::fund::addFavoriteXchgAddress`,
+        });
+
+        signAndExecute(
+            {
+                transaction: tx,
+            },
+            {
+                onSuccess: async ({ digest }) => {
+                    const { effects } = await suiClient.waitForTransaction({
+                        digest: digest,
+                        options: {
+                            showEffects: true,
+                            showRawEffects: true,
+                        },
+                    });
+                    console.log("Effects: ", effects);
+                    reloadProfile();
+                    alert("OK");
+                },
+                onError: (error) => {
+                    alert("Error: " + error);
+                }
+
+            },
+        );
+    }
+
+    const updateFavoriteXchgAddress = async (xchgAddr: string, name: string, group: string, description: string) => {
+        if (!currentAccount) {
+            return;
+        }
+
+        const tx = new Transaction();
+
+        //let xchgAddr = "0x000102030405060708090A0B0C0D0E0F000102030405060708090A0B0C0D0E0F"
+
+        //let xchgAddr = xchgAddressToAdd;
+        tx.moveCall({
+            arguments: [
+                tx.object(TESTNET_COUNTER_FUND_ID),
+                tx.pure.address(xchgAddr),
+                tx.pure.string(name),
+                tx.pure.string(group),
+                tx.pure.string(description),
+            ],
+            target: `${counterPackageId}::fund::modifyFavoriteXchgAddress`,
         });
 
         signAndExecute(
@@ -562,6 +634,7 @@ export function Profile(
         );
     }
 
+    
     const startSponsoring = async (xchgAddr: string) => {
         if (!currentAccount) {
             return;
@@ -743,23 +816,22 @@ export function Profile(
                         <Flex direction='column'>
                             <Flex style={{ fontSize: '24pt' }}>My Favorites:</Flex>
                             <Flex direction='row'>
-                                <input
-                                    placeholder="XCHG address"
-                                    style={{ width: '300px' }}
-                                    value={xchgAddressToAdd}
-                                    onChange={(e) => setXchgAddressToAdd(e.target.value)}
-                                >
-                                </input>
-                                <Button onClick={() => addFavoriteXchgAddress()}>ADD</Button>
+                                <Button onClick={() => addFavoriteXchgAddressDialog()}>ADD</Button>
                             </Flex>
 
                             <Flex direction="column">
                                 {profileState.favoriteXchgAddresses.map((item, index) => (
-                                    <Flex key={item.xchgAddr + "_" + index} style={{ borderTop: '1px solid #DDD' }} direction='column'>
+                                    <Flex key={item.xchgAddr + "_" + index} 
+                                    style={{ border: '1px solid #55F', margin: '10px', padding: '10px' }} 
+                                    direction='column'>
                                         <Flex>XCHG Address: {item.xchgAddr}</Flex>
+                                        <Flex>Name: {item.name}</Flex>
                                         <Flex>Group: {item.group}</Flex>
                                         <Flex>Description: {item.description}</Flex>
                                         <Flex>Balance: {item.balance}</Flex>
+                                        <Flex>
+                                            <Button onClick={() => updateFavDialog(item.xchgAddr)}>UPDATE FAV</Button>
+                                        </Flex>
                                         <Flex key={item.xchgAddr + "_" + index + "_sponsors"}>
                                             <Flex key={item.xchgAddr + "_" + index + "_sponsors_header"}>SPONSORS:</Flex>
                                             {item.xchgAddrObject != null && item.xchgAddrObject.sponsors.map((sponsorItem, index) => (
@@ -808,7 +880,11 @@ export function Profile(
                             onSubmit={handleSubmit}
                         />
                     </div>
-
+                    <EditFavoriteXchgAddressDialog
+                        isOpen={isEditFavoriteXchgAddressDialogOpen}
+                        onClose={handleCloseEditFavoriteXchgAddressDialog}
+                        onSubmit={handleSubmitEditFavoriteXchgAddressDialog}
+                    />
 
                 </Flex>
             }
