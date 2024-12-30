@@ -36,49 +36,46 @@ function App() {
 	}
 
 	return (
-		<>
-			<Flex
-				position="sticky"
-				px="4"
-				py="2"
-				justify="between"
-				style={{
-					borderBottom: "1px solid var(--gray-a2)",
-					backgroundColor: '#EEFF00',
-				}}
-			>
-				<Box>
-					<Heading><a href="/">SUI Notes</a></Heading>
-				</Box>
-				<Box>
-					<a href="/profile">Profile</a>
-				</Box>
-				<Box>
-					<a href="/address">Address</a>
-				</Box>
-				<Box>
-					<a href="/network">Network</a>
-				</Box>
-				<Box>
-					<a href="/debug">DEBUG</a>
-				</Box>
-				<Box>
-					<ConnectButton />
-				</Box>
-			</Flex>
-			<Container>
+		<Flex direction='column' align='center'>
+			<Flex maxWidth='600px' minWidth='600px' direction='column'>
+				<Flex direction='row' align='center' >
+					<Flex direction='column'>
+						<a style={styles.link} href="/profile">Profile</a>
+						<a style={styles.link} href="/address">Address</a>
+					</Flex>
+					<Flex direction='column'>
+						<a style={styles.link} href="/network">Network</a>
+						<a style={styles.link} href="/debug">DEBUG</a>
+					</Flex>
+					<Flex flexGrow='2'>
+					</Flex>
+					<Box>
+						<ConnectButton />
+					</Box>
+				</Flex>
+
 				<Container>
-					{content}
-					{currentAccount ? (
-						<Heading></Heading>
-					) : (
-						<Heading>Please connect your wallet</Heading>
-					)
-					}
+					<Container>
+						{content}
+						{currentAccount ? (
+							<Heading></Heading>
+						) : (
+							<Heading>Please connect your wallet</Heading>
+						)
+						}
+					</Container>
 				</Container>
-			</Container>
-		</>
+			</Flex>
+		</Flex>
 	);
 }
+
+const styles: Record<string, React.CSSProperties> = {
+    link: {
+        margin: '6px',
+		color: '#007BFF',
+    },
+};
+
 
 export default App;

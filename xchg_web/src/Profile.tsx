@@ -8,12 +8,12 @@ import { useNetworkVariable } from "./networkConfig";
 import { useEffect, useState } from "react";
 import { getObjectFields, shortAddress } from "./utils";
 import { TB_TYPE, TESTNET_COUNTER_FUND_ID } from "./constants";
-import { makeError } from "./error";
 import type { WalletAccount } from '@mysten/wallet-standard';
 import TextInputDialog from "./TextInputDialog";
 import EditFavoriteXchgAddressDialog from "./EditFavoriteXchgAddressDialog";
 import ProfileWithdrawDialog from "./ProfileWithdrawDialog";
 import ProfileDepositDialog from "./ProfileDepositDialog";
+import { prepareCoin } from "./prepare_coin";
 
 export function Profile(
     { currentAccount, }: { currentAccount: WalletAccount }
@@ -23,23 +23,19 @@ export function Profile(
         balance: "",
         favoriteXchgAddresses: [],
         own_routers: [],
-        sponsoredXchgAddresses: [],
     }
 
-
-    //let currentAccount = useCurrentAccount();
-    const [profileLoaded, setProfileLoaded] = useState(false);
     const counterPackageId = useNetworkVariable("counterPackageId");
     const suiClient = useSuiClient();
     const { mutate: signAndExecute } = useSignAndExecuteTransaction();
-    const [profileState, setProfileState] = useState(defaultProfileState);
 
+    const [profileLoaded, setProfileLoaded] = useState(false);
+    const [profileState, setProfileState] = useState(defaultProfileState);
     const [profileNotFound, setProfileNotFound] = useState(false);
 
     ///////////////////////////////////////////////////////////////
     // Dialog
     const [isDialogOpen, setDialogOpen] = useState(false);
-    const [submittedText, setSubmittedText] = useState('');
     const [dialogHeader, setDialogHeader] = useState('');
 
     const [dialogData, setDialogData] = useState('');
@@ -48,7 +44,6 @@ export function Profile(
     const handleOpenDialog = () => setDialogOpen(true);
     const handleCloseDialog = () => setDialogOpen(false);
     const handleSubmit = (value: string) => {
-        setSubmittedText(value);
 
         if (dialogType === "updateSponsoring") {
             let valueAsNumber = parseFloat(value);
@@ -118,8 +113,6 @@ export function Profile(
     }
     ///////////////////////////////////////////////////////////////
 
-    // console.log("Current Account: ", currentAccount);
-
     useEffect(() => {
         if (!profileLoaded) {
             getProfileObject();
@@ -147,68 +140,11 @@ export function Profile(
         xchgAddrObject: XchgAddrObject,
     }
 
-    /*
-       limitPerDay: u64,
-    virtualBalance : u64,
-    lastOperation: u64,
-    suiAddr: address, 
-    */
-
     interface SponsorXchgAddress {
         suiAddr: string,
         lastOperation: string,
         virutalBalance: string,
         limitPerDay: string,
-    }
-
-    const prepareCoin = async (account: WalletAccount, tx: Transaction, coinType: string, amount: bigint): (Promise<TransactionResult | DError>) => {
-        if (!account) {
-            return makeError("No account");
-        }
-
-        const coinTypeParts = coinType.split('::');
-        if (coinTypeParts.length !== 3) {
-            return makeError("Invalid coin type");
-        }
-
-        const coinSymbol = coinType.split('::')[2];
-
-        const { data: coins } = await suiClient.getCoins({
-            owner: account.address,
-            coinType: coinType,
-        });
-
-        if (coins.length === 0) {
-            return makeError("No " + coinSymbol + " found");
-        }
-
-        let totalBalance = 0n;
-        for (let i = 0; i < coins.length; i++) {
-            let balanceAsBitInt = BigInt(coins[i].balance);
-            totalBalance += balanceAsBitInt;
-        }
-
-        //let totalBalanceAsFloat = parseFloat(totalBalance.toString()) / 1000000000;
-        if (BigInt(totalBalance) < amount) {
-            console.log('Not enough balance');
-            return makeError("Not enough " + coinSymbol + " balance");
-        }
-
-        console.log('Coins found', coins);
-
-        // Try to find a coin with enough amount
-        let coinWithEnoughAmount = coins.find((coin) => BigInt(coin.balance) >= BigInt(amount));
-        if (coinWithEnoughAmount) {
-            const coin = tx.splitCoins(coinWithEnoughAmount.coinObjectId, [amount]);
-            return coin;
-        }
-
-        // Merge all coins into the first coin
-        let coinsIDs = coins.map((coin) => coin.coinObjectId);
-        let coinsIDsFromSecondItem = coinsIDs.slice(1);
-        tx.mergeCoins(coins[0].coinObjectId, coinsIDsFromSecondItem);
-        const coin = tx.splitCoins(coins[0].coinObjectId, [amount]);
-        return coin;
     }
 
     const getProfilesTableId = async () => {
@@ -415,7 +351,7 @@ export function Profile(
 
         let amountBigInt = BigInt(amount);
 
-        const coin = await prepareCoin(currentAccount, tx, TB_TYPE, amountBigInt);
+        const coin = await prepareCoin(suiClient, currentAccount, tx, TB_TYPE, amountBigInt);
         console.log('coin', coin);
         // if coin is a DError
         if ('errorMessage' in coin) {
@@ -461,7 +397,7 @@ export function Profile(
 
         const tx = new Transaction();
 
-        const coin = await prepareCoin(currentAccount, tx, TB_TYPE, 10000000000n);
+        const coin = await prepareCoin(suiClient, currentAccount, tx, TB_TYPE, 10000000000n);
         console.log('coin', coin);
         // if coin is a DError
         if ('errorMessage' in coin) {
@@ -803,131 +739,199 @@ export function Profile(
     }
 
     const displayXchgBalance = (balanceStr: string) => {
-        return parseFloat(balanceStr);
+        let balance = parseFloat(balanceStr);
+        if (isNaN(balance)) {
+            balance = 0;
+        }
+        if (balance < 0) {
+            balance = 0;
+        }
+
+        let balanceFormatted = '---';
+        if (balance >= 0 && balance < 1000) {
+            balanceFormatted = balance + ' bytes';
+        }
+        if (balance >= 1000 && balance < 1000000) {
+            balanceFormatted = (balance / 1000).toFixed(3) + ' KB';
+        }
+        if (balance >= 1000000 && balance < 1000000000) {
+            balanceFormatted = (balance / 1000000).toFixed(3) + ' MB';
+        }
+        if (balance >= 1000000000 && balance < 1000000000000) {
+            balanceFormatted = (balance / 1000000000).toFixed(3) + ' GB';
+        }
+        if (balance >= 1000000000000) {
+            balanceFormatted = (balance / 1000000000000).toFixed(3) + ' TB';
+        }
+
+        return balanceFormatted;
     }
-    
+
     const copyTextToClipboard = (text: string) => {
         navigator.clipboard.writeText(text);
     }
 
     return (
-        <>
-            <hr style={{ marginTop: '20px' }} />
-            <h1>PROFILE</h1>
-            <Flex>
-                {profileLoaded ? <div></div> : <div>loading</div>}
-            </Flex>
-
-            {profileNotFound
-                &&
-                <Button
-                    style={{ margin: '12px' }}
-                    onClick={() => create_profile()}
-                >
-                    CREATE PROFILE
-                </Button>
-            }
-
-            {profileLoaded && !profileNotFound &&
-                <Flex direction="column" gap="2">
-                    <Flex>
-                        {currentAccount.address}
-                        <Button onClick={() => copyTextToClipboard(currentAccount.address)}>COPY</Button>
-                        <Flex flexGrow='1'></Flex>
-                        <Button onClick={() => getProfileObject()}>GET STATE</Button>
-                    </Flex>
-                    <Flex direction="column" gap="2">
-                        <Flex direction='column'>
-                            <Flex direction='row' style={{ backgroundColor: '#333' }}>
-                                <Flex style={{ fontSize: '24pt' }}>BALANCE</Flex>
-                                <Flex flexGrow='1'></Flex>
-                                <Button onClick={() => profileDepositDialog()}>DEPOSIT</Button>
-                            </Flex>
-                            <Flex direction='row' style={{ backgroundColor: '#333' }}>
-                                <Flex style={{ fontSize: '24pt' }}>{displayXchgBalance(profileState.balance)} bytes</Flex>
-                                <Flex flexGrow='1'></Flex>
-                                <Button onClick={() => profileWithdrawDialog()}>WITHDRAW</Button>
-                            </Flex>
-                        </Flex>
-                        <Flex direction='column'>
-                            <Flex style={{ fontSize: '24pt' }}>My Favorites:</Flex>
-                            <Flex direction='row'>
-                                <Button onClick={() => addFavoriteXchgAddressDialog()}>ADD</Button>
-                            </Flex>
-
-                            <Flex direction="column">
-                                {profileState.favoriteXchgAddresses.map((item, index) => (
-                                    <Flex key={item.xchgAddr + "_" + index}
-                                        style={{ border: '1px solid #55F', margin: '10px', padding: '10px' }}
-                                        direction='column'>
-                                        <Flex>XCHG Address: {item.xchgAddr}</Flex>
-                                        <Flex>Name: {item.name}</Flex>
-                                        <Flex>Group: {item.group}</Flex>
-                                        <Flex>Description: {item.description}</Flex>
-                                        <Flex>Balance: {item.balance}</Flex>
-                                        <Flex>
-                                            <Button onClick={() => updateFavDialog(item.xchgAddr)}>UPDATE FAV</Button>
-                                        </Flex>
-                                        <Flex key={item.xchgAddr + "_" + index + "_sponsors"}>
-                                            <Flex key={item.xchgAddr + "_" + index + "_sponsors_header"}>SPONSORS:</Flex>
-                                            {item.xchgAddrObject != null && item.xchgAddrObject.sponsors.map((sponsorItem, index) => (
-                                                <Flex key={item.xchgAddr + "_sponsor_" + index} style={{ borderTop: '1px solid #DDD' }} direction='column'>
-                                                    <Flex>SUI Address: {sponsorItem.suiAddr}</Flex>
-                                                    <Flex>Last Operation: {sponsorItem.lastOperation}</Flex>
-                                                    <Flex>Virtual Balance: {sponsorItem.virutalBalance}</Flex>
-                                                    <Flex>Limit Per Day: {sponsorItem.limitPerDay}
-                                                        <Button onClick={() => updateSponsoringDialog(item.xchgAddr)}>UPDATE</Button>
-                                                    </Flex>
-                                                </Flex>
-                                            ))}
-                                        </Flex>
-                                        <Flex>
-                                            <Button onClick={() => removeFavoriteXchgAddress(item.xchgAddr)}>REMOVE</Button>
-                                            <Button onClick={() => depositToXchgAddress(item.xchgAddr)}>DEPOSIT TO ADDRESS</Button>
-                                            <Button onClick={() => startSponsoring(item.xchgAddr)}>START SPONSORING</Button>
-                                            <Button onClick={() => stopSponsoring(item.xchgAddr)}>STOP SPONSORING</Button>
-                                        </Flex>
-                                    </Flex>
-                                ))
-                                }
-                            </Flex>
-                        </Flex>
-
-                    </Flex>
-
-                    <Flex>
-                        0x5ded23a41eb84ec1f95b27d14222155f145a45e76a6377ae9cfcf754a4da9956
-                    </Flex>
-
-                    <hr />
-
-                    <TextInputDialog
-                        isOpen={isDialogOpen}
-                        header={dialogHeader}
-                        onClose={handleCloseDialog}
-                        onSubmit={handleSubmit}
-                    />
-                    <EditFavoriteXchgAddressDialog
-                        isOpen={isEditFavoriteXchgAddressDialogOpen}
-                        onClose={handleCloseEditFavoriteXchgAddressDialog}
-                        onSubmit={handleSubmitEditFavoriteXchgAddressDialog}
-                    />
-
-                    <ProfileWithdrawDialog
-                        isOpen={isProfileWithdrawDialogOpen}
-                        onClose={handleCloseProfileWithdrawDialog}
-                        onSubmit={handleSubmitProfileWithdrawDialog}
-                    />
-
-                    <ProfileDepositDialog
-                        isOpen={isProfileDepositDialogOpen}
-                        onClose={handleCloseProfileDepositDialog}
-                        onSubmit={handleSubmitProfileDepositDialog}
-                    />
-
+        <Flex direction='column' align='stretch'>
+            <Flex direction='column' align='stretch'>
+                <Flex direction='row'>
+                    <Flex style={{ fontSize: '24pt' }}>My Xchg Profile</Flex>
+                    <Flex flexGrow='1'></Flex>
+                    <Button style={styles.button} onClick={() => getProfileObject()}>UPDATE</Button>
                 </Flex>
-            }
+                <Flex>
+                    {profileLoaded ? <div></div> : <div>loading</div>}
+                </Flex>
 
-        </>
+                {profileNotFound
+                    &&
+                    <Flex direction='column' align='center'>
+                        <Flex style={{ marginTop: '30px' }}>
+                            PROFILE NOT FOUND
+                        </Flex>
+                        <Button
+                            style={{ marginTop: '30px', backgroundColor: '#1a1a1a', border: '1px solid #0A5', width: '200px', height: '120px', cursor: 'pointer' }}
+                            onClick={() => create_profile()}
+                        >
+                            CREATE PROFILE
+                        </Button>
+                    </Flex>
+                }
+
+                {profileLoaded && !profileNotFound &&
+                    <Flex direction="column" gap="2">
+                        <Flex direction="column" gap="2">
+                            <Flex direction='column' style={{ backgroundColor: '#222', border: '1px solid #555' }}>
+                                <Flex direction='row' align='center' style={{}}>
+                                    <Flex style={styles.suiAddr}>{shortAddress(currentAccount.address)}</Flex>
+                                    <Flex flexGrow='1'></Flex>
+                                    <Button style={styles.button} onClick={() => profileDepositDialog()}>DEPOSIT</Button>
+                                </Flex>
+                                <Flex direction='row' align='center' style={{}}>
+                                    <Flex style={styles.textBlock}>{displayXchgBalance(profileState.balance)}</Flex>
+                                    <Flex flexGrow='1'></Flex>
+                                    <Button style={styles.button} onClick={() => profileWithdrawDialog()}>WITHDRAW</Button>
+                                </Flex>
+                                <Flex direction='row' align='center' style={{}}>
+                                    <Flex style={styles.textBlock}>{profileState.balance} bytes</Flex>
+                                    <Flex flexGrow='1'></Flex>
+                                </Flex>
+                            </Flex>
+                            <Flex direction='column'>
+                                <Flex style={{ fontSize: '24pt' }}>My Favorites:</Flex>
+                                <Flex direction='row'>
+                                    <Button onClick={() => addFavoriteXchgAddressDialog()}>ADD</Button>
+                                </Flex>
+
+                                <Flex direction="column">
+                                    {profileState.favoriteXchgAddresses.map((item, index) => (
+                                        <Flex key={item.xchgAddr + "_" + index}
+                                            style={{ border: '1px solid #55F', margin: '10px', padding: '10px' }}
+                                            direction='column'>
+                                            <Flex align='center'>
+                                                <Flex style={styles.textBlock}>
+                                                    XCHG Address:
+                                                </Flex>
+                                                <Flex style={styles.xchgAddr}>
+                                                    {shortAddress(item.xchgAddr)}
+                                                </Flex>
+                                                <Button style={styles.button} onClick={() => copyTextToClipboard(item.xchgAddr)}>COPY</Button>
+                                            </Flex>
+                                            <Flex>Name: {item.name}</Flex>
+                                            <Flex>Group: {item.group}</Flex>
+                                            <Flex>Description: {item.description}</Flex>
+                                            <Flex>Balance: {item.balance}</Flex>
+                                            <Flex>
+                                                <Button onClick={() => updateFavDialog(item.xchgAddr)}>UPDATE FAV</Button>
+                                            </Flex>
+                                            <Flex key={item.xchgAddr + "_" + index + "_sponsors"}>
+                                                <Flex key={item.xchgAddr + "_" + index + "_sponsors_header"}>SPONSORS:</Flex>
+                                                {item.xchgAddrObject != null && item.xchgAddrObject.sponsors.map((sponsorItem, index) => (
+                                                    <Flex key={item.xchgAddr + "_sponsor_" + index} style={{ borderTop: '1px solid #DDD' }} direction='column'>
+                                                        <Flex>SUI Address: {shortAddress(sponsorItem.suiAddr)}</Flex>
+                                                        <Flex>Last Operation: {sponsorItem.lastOperation}</Flex>
+                                                        <Flex>Virtual Balance: {sponsorItem.virutalBalance}</Flex>
+                                                        <Flex>Limit Per Day: {sponsorItem.limitPerDay}
+                                                            <Button onClick={() => updateSponsoringDialog(item.xchgAddr)}>UPDATE</Button>
+                                                        </Flex>
+                                                    </Flex>
+                                                ))}
+                                            </Flex>
+                                            <Flex>
+                                                <Button onClick={() => removeFavoriteXchgAddress(item.xchgAddr)}>REMOVE</Button>
+                                                <Button onClick={() => depositToXchgAddress(item.xchgAddr)}>DEPOSIT TO ADDRESS</Button>
+                                                <Button onClick={() => startSponsoring(item.xchgAddr)}>START SPONSORING</Button>
+                                                <Button onClick={() => stopSponsoring(item.xchgAddr)}>STOP SPONSORING</Button>
+                                            </Flex>
+                                        </Flex>
+                                    ))
+                                    }
+                                </Flex>
+                            </Flex>
+
+                        </Flex>
+
+                        <Flex>
+                            0x5ded23a41eb84ec1f95b27d14222155f145a45e76a6377ae9cfcf754a4da9956
+                        </Flex>
+
+                        <hr />
+
+                        <TextInputDialog
+                            isOpen={isDialogOpen}
+                            header={dialogHeader}
+                            onClose={handleCloseDialog}
+                            onSubmit={handleSubmit}
+                        />
+                        <EditFavoriteXchgAddressDialog
+                            isOpen={isEditFavoriteXchgAddressDialogOpen}
+                            onClose={handleCloseEditFavoriteXchgAddressDialog}
+                            onSubmit={handleSubmitEditFavoriteXchgAddressDialog}
+                        />
+
+                        <ProfileWithdrawDialog
+                            isOpen={isProfileWithdrawDialogOpen}
+                            onClose={handleCloseProfileWithdrawDialog}
+                            onSubmit={handleSubmitProfileWithdrawDialog}
+                        />
+
+                        <ProfileDepositDialog
+                            isOpen={isProfileDepositDialogOpen}
+                            onClose={handleCloseProfileDepositDialog}
+                            onSubmit={handleSubmitProfileDepositDialog}
+                        />
+
+                    </Flex>
+                }
+            </Flex>
+        </Flex>
     );
 }
+
+const styles: Record<string, React.CSSProperties> = {
+    button: {
+        fontFamily: 'Roboto Mono',
+        margin: '6px',
+        padding: '6px',
+        border: '1px solid #777',
+        borderRadius: '5px',
+        cursor: 'pointer',
+        backgroundColor: '#333',
+        color: '#fff',
+        width: '100px',
+    },
+    suiAddr: {
+        fontFamily: 'Roboto Mono',
+        color: '#55F',
+        margin: '6px',
+    },
+    xchgAddr: {
+        fontFamily: 'Roboto Mono',
+        color: '#5F5',
+        margin: '6px',
+    },
+    textBlock: {
+        fontFamily: 'Roboto Mono',
+        margin: '6px',
+    },
+};
