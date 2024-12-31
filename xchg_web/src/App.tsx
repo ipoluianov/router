@@ -1,10 +1,11 @@
-import { ConnectButton, useCurrentAccount } from "@mysten/dapp-kit";
-import { Box, Container, Flex, Heading } from "@radix-ui/themes";
+import { ConnectButton, lightTheme, useCurrentAccount, WalletProvider } from "@mysten/dapp-kit";
+import { Box, Button, Container, Flex, Heading } from "@radix-ui/themes";
 import { Router } from "./Router";
 import { Network } from "./Network";
 import { Profile } from "./Profile";
 import { Fund } from "./Fund";
 import { CreateCounter } from "./CreateCounter";
+import './customStyles.css'; // Импортируйте ваш CSS файл
 
 function App() {
 	const currentAccount = useCurrentAccount();
@@ -37,20 +38,24 @@ function App() {
 
 	return (
 		<Flex direction='column' align='center'>
+
 			<Flex maxWidth='600px' minWidth='600px' direction='column'>
-				<Flex direction='row' align='center' >
-					<Flex direction='column'>
-						<a style={styles.link} href="/profile">Profile</a>
-						<a style={styles.link} href="/address">Address</a>
+				<Flex direction='row' align='center' style={{borderBottom: '1px solid #777', marginBottom: '20px'}}>
+					<Flex style={styles.logo}>XCHG</Flex>
+					<Flex flexGrow='2'>
 					</Flex>
 					<Flex direction='column'>
-						<a style={styles.link} href="/network">Network</a>
-						<a style={styles.link} href="/debug">DEBUG</a>
+						<Button style={styles.link} onClick={() => { window.location.href = '/profile' }}>Profile</Button>
+						<Button style={styles.link} onClick={() => { window.location.href = '/address' }}>Address</Button>
+					</Flex>
+					<Flex direction='column'>
+						<Button style={styles.link} onClick={() => { window.location.href = '/network' }}>Network</Button>
+						<Button style={styles.link} onClick={() => { window.location.href = '/debug' }}>Debug</Button>
 					</Flex>
 					<Flex flexGrow='2'>
 					</Flex>
 					<Box>
-						<ConnectButton />
+						<ConnectButton className="custom-connect-button" />
 					</Box>
 				</Flex>
 
@@ -71,10 +76,21 @@ function App() {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-    link: {
-        margin: '6px',
-		color: '#007BFF',
-    },
+	link: {
+		fontFamily: 'Roboto Mono',
+		margin: '6px',
+		padding: '6px',
+		border: '1px solid #777',
+		borderRadius: '5px',
+		cursor: 'pointer',
+		backgroundColor: '#333',
+		color: '#fff',
+		width: '100px',
+	},
+	logo: {
+		fontFamily: 'Roboto Mono',
+		fontSize: '24pt',
+	}
 };
 
 

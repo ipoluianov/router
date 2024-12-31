@@ -129,6 +129,7 @@ export function Profile(
         balance: string,
         ownerSuiAddr: string,
         sponsors: SponsorXchgAddress[]
+        sponsoredByMe: boolean,
     }
 
     interface FavotiveXchgAddress {
@@ -205,6 +206,8 @@ export function Profile(
 
         let sponsors: SponsorXchgAddress[] = [];
 
+        let sponsoredByMe = false;
+
         if (fields.sponsors != null) {
 
             for (let i = 0; i < fields.sponsors.length; i++) {
@@ -217,6 +220,10 @@ export function Profile(
                     limitPerDay: item.fields.limitPerDay,
                 }
 
+                if (item.fields.suiAddr == currentAccount.address) {
+                    sponsoredByMe = true;
+                }
+
                 sponsors.push(sponsorItem);
             }
         }
@@ -225,6 +232,7 @@ export function Profile(
             balance: fields.balance,
             ownerSuiAddr: fields.ownerSuiAddr,
             sponsors: sponsors,
+            sponsoredByMe: sponsoredByMe,
         }
 
         console.log("XCHG_ADDR_OBJECT: ", xcgfAddrObject);
@@ -267,7 +275,6 @@ export function Profile(
                 balance: fields.balance,
                 favoriteXchgAddresses: [],
                 own_routers: [],
-                sponsoredXchgAddresses: [],
             }
 
             for (let i = 0; i < fields.favoriteXchgAddresses.length; i++) {
@@ -491,8 +498,8 @@ export function Profile(
                 tx.object(TESTNET_COUNTER_FUND_ID),
                 tx.pure.address(xchgAddr),
                 tx.pure.string("name"),
-                tx.pure.string("group"),
-                tx.pure.string("description"),
+                tx.pure.string(""),
+                tx.pure.string(""),
             ],
             target: `${counterPackageId}::fund::addFavoriteXchgAddress`,
         });
@@ -774,8 +781,8 @@ export function Profile(
     return (
         <Flex direction='column' align='stretch'>
             <Flex direction='column' align='stretch'>
-                <Flex direction='row'>
-                    <Flex style={{ fontSize: '24pt' }}>My Xchg Profile</Flex>
+                <Flex direction='row' align='end'>
+                    <Flex style={{ fontSize: '12pt', fontFamily: 'Roboto Mono' }}>MY PROFILE</Flex>
                     <Flex flexGrow='1'></Flex>
                     <Button style={styles.button} onClick={() => getProfileObject()}>UPDATE</Button>
                 </Flex>
@@ -790,7 +797,7 @@ export function Profile(
                             PROFILE NOT FOUND
                         </Flex>
                         <Button
-                            style={{ marginTop: '30px', backgroundColor: '#1a1a1a', border: '1px solid #0A5', width: '200px', height: '120px', cursor: 'pointer' }}
+                            style={{ marginTop: '30px', backgroundColor: '#1a1a1a', border: '1px solid #0A5', width: '200px', height: '120px', cursor: 'pointer', color: '#0F7', fontSize: '16pt' }}
                             onClick={() => create_profile()}
                         >
                             CREATE PROFILE
@@ -808,7 +815,7 @@ export function Profile(
                                     <Button style={styles.button} onClick={() => profileDepositDialog()}>DEPOSIT</Button>
                                 </Flex>
                                 <Flex direction='row' align='center' style={{}}>
-                                    <Flex style={styles.textBlock}>{displayXchgBalance(profileState.balance)}</Flex>
+                                    <Flex style={styles.textBlockBalance}>{displayXchgBalance(profileState.balance)}</Flex>
                                     <Flex flexGrow='1'></Flex>
                                     <Button style={styles.button} onClick={() => profileWithdrawDialog()}>WITHDRAW</Button>
                                 </Flex>
@@ -818,50 +825,63 @@ export function Profile(
                                 </Flex>
                             </Flex>
                             <Flex direction='column'>
-                                <Flex style={{ fontSize: '24pt' }}>My Favorites:</Flex>
-                                <Flex direction='row'>
-                                    <Button onClick={() => addFavoriteXchgAddressDialog()}>ADD</Button>
+                                <Flex direction='row' align='end'>
+                                    <Flex style={{ fontSize: '12pt' }}>FAVORITES</Flex>
+                                    <Flex flexGrow='1'></Flex>
+                                    <Button style={styles.button} onClick={() => addFavoriteXchgAddressDialog()}>ADD</Button>
                                 </Flex>
 
-                                <Flex direction="column">
+                                <Flex direction="column" style={{ backgroundColor: "#222", border: '1px solid #777' }}>
                                     {profileState.favoriteXchgAddresses.map((item, index) => (
                                         <Flex key={item.xchgAddr + "_" + index}
-                                            style={{ border: '1px solid #55F', margin: '10px', padding: '10px' }}
+                                            style={{ backgroundColor: "#222", border: '1px solid #777', margin: '0px', padding: '0px' }}
                                             direction='column'>
-                                            <Flex align='center'>
-                                                <Flex style={styles.textBlock}>
-                                                    XCHG Address:
-                                                </Flex>
-                                                <Flex style={styles.xchgAddr}>
-                                                    {shortAddress(item.xchgAddr)}
-                                                </Flex>
-                                                <Button style={styles.button} onClick={() => copyTextToClipboard(item.xchgAddr)}>COPY</Button>
-                                            </Flex>
-                                            <Flex>Name: {item.name}</Flex>
-                                            <Flex>Group: {item.group}</Flex>
-                                            <Flex>Description: {item.description}</Flex>
-                                            <Flex>Balance: {item.balance}</Flex>
-                                            <Flex>
-                                                <Button onClick={() => updateFavDialog(item.xchgAddr)}>UPDATE FAV</Button>
-                                            </Flex>
-                                            <Flex key={item.xchgAddr + "_" + index + "_sponsors"}>
-                                                <Flex key={item.xchgAddr + "_" + index + "_sponsors_header"}>SPONSORS:</Flex>
-                                                {item.xchgAddrObject != null && item.xchgAddrObject.sponsors.map((sponsorItem, index) => (
-                                                    <Flex key={item.xchgAddr + "_sponsor_" + index} style={{ borderTop: '1px solid #DDD' }} direction='column'>
-                                                        <Flex>SUI Address: {shortAddress(sponsorItem.suiAddr)}</Flex>
-                                                        <Flex>Last Operation: {sponsorItem.lastOperation}</Flex>
-                                                        <Flex>Virtual Balance: {sponsorItem.virutalBalance}</Flex>
-                                                        <Flex>Limit Per Day: {sponsorItem.limitPerDay}
-                                                            <Button onClick={() => updateSponsoringDialog(item.xchgAddr)}>UPDATE</Button>
+                                            <Flex direction='row'>
+                                                <Flex direction='column'>
+                                                    <Flex align='center'>
+                                                        <Flex style={styles.textBlock}>
+                                                            Address:
                                                         </Flex>
+                                                        <Flex style={styles.xchgAddr}>
+                                                            {shortAddress(item.xchgAddr)}
+                                                        </Flex>
+                                                        <Button style={styles.button} onClick={() => copyTextToClipboard(item.xchgAddr)}>COPY</Button>
+                                                    </Flex>
+                                                    <Flex direction='row'>
+                                                        <Flex style={styles.textBlock}>Name: {item.name}</Flex>
+                                                        <Button style={styles.button} onClick={() => updateFavDialog(item.xchgAddr)}>RENAME</Button>
+                                                    </Flex>
+                                                    <Flex direction='row'>
+                                                        <Flex style={styles.textBlock} >Balance: {item.balance}</Flex>
+                                                        <Button style={styles.button} onClick={() => depositToXchgAddress(item.xchgAddr)}>DEPOSIT</Button>
+                                                    </Flex>
+                                                </Flex>
+                                                <Flex flexGrow='1'></Flex>
+                                                <Flex direction='column'>
+                                                    <Flex direction='column'>
+                                                        <Button style={styles.button} onClick={() => removeFavoriteXchgAddress(item.xchgAddr)}>REMOVE</Button>
+                                                    </Flex>
+                                                </Flex>
+                                            </Flex>
+                                            <Flex key={item.xchgAddr + "_" + index + "_sponsors"} direction='column'>
+                                                <Flex>Sponsors:</Flex>
+                                                {item.xchgAddrObject != null && item.xchgAddrObject.sponsors.map((sponsorItem, index) => (
+                                                    sponsorItem.suiAddr == currentAccount.address &&
+                                                    <Flex key={item.xchgAddr + "_sponsor_" + index} style={{}} direction='row' align='center'>
+                                                        <Flex flexGrow='1'></Flex>
+                                                        <Flex>{sponsorItem.virutalBalance} / {sponsorItem.limitPerDay}</Flex>
+                                                        <Button style={styles.button} onClick={() => updateSponsoringDialog(item.xchgAddr)}>UPDATE</Button>
+                                                        <Button style={styles.button} onClick={() => stopSponsoring(item.xchgAddr)}>STOP SPONSORING</Button>
+
                                                     </Flex>
                                                 ))}
-                                            </Flex>
-                                            <Flex>
-                                                <Button onClick={() => removeFavoriteXchgAddress(item.xchgAddr)}>REMOVE</Button>
-                                                <Button onClick={() => depositToXchgAddress(item.xchgAddr)}>DEPOSIT TO ADDRESS</Button>
-                                                <Button onClick={() => startSponsoring(item.xchgAddr)}>START SPONSORING</Button>
-                                                <Button onClick={() => stopSponsoring(item.xchgAddr)}>STOP SPONSORING</Button>
+
+                                                {
+                                                    (item.xchgAddrObject == null || item.xchgAddrObject.sponsors.length == 0 || item.xchgAddrObject.sponsoredByMe == false) &&
+                                                    <Flex style={{ color: '#777', fontSize: '10pt' }}>
+                                                        <Button style={styles.button} onClick={() => startSponsoring(item.xchgAddr)}>START SPONSORING</Button>
+                                                    </Flex>
+                                                }
                                             </Flex>
                                         </Flex>
                                     ))
@@ -871,11 +891,9 @@ export function Profile(
 
                         </Flex>
 
-                        <Flex>
+                        <Flex style={{ color: '#444444', fontSize: '10pt' }}>
                             0x5ded23a41eb84ec1f95b27d14222155f145a45e76a6377ae9cfcf754a4da9956
                         </Flex>
-
-                        <hr />
 
                         <TextInputDialog
                             isOpen={isDialogOpen}
@@ -922,16 +940,22 @@ const styles: Record<string, React.CSSProperties> = {
     },
     suiAddr: {
         fontFamily: 'Roboto Mono',
-        color: '#55F',
+        color: '#AAA',
         margin: '6px',
     },
     xchgAddr: {
         fontFamily: 'Roboto Mono',
-        color: '#5F5',
+        color: '#EEE',
         margin: '6px',
     },
     textBlock: {
         fontFamily: 'Roboto Mono',
         margin: '6px',
+    },
+    textBlockBalance: {
+        fontFamily: 'Roboto Mono',
+        margin: '6px',
+        color: '#0F8',
+        fontSize: '16pt',
     },
 };
