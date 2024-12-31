@@ -3,7 +3,7 @@ import {
     useSuiClient,
 } from "@mysten/dapp-kit";
 import { Transaction } from "@mysten/sui/transactions";
-import { Button, Flex, Table } from "@radix-ui/themes";
+import { Button, Container, Flex, Table } from "@radix-ui/themes";
 import { useNetworkVariable } from "./networkConfig";
 import { useEffect, useState } from "react";
 import { getObjectFields, shortAddress } from "./utils";
@@ -32,6 +32,7 @@ export function Profile(
     const [profileLoaded, setProfileLoaded] = useState(false);
     const [profileState, setProfileState] = useState(defaultProfileState);
     const [profileNotFound, setProfileNotFound] = useState(false);
+    const [errorText, setErrorText] = useState('');
 
     ///////////////////////////////////////////////////////////////
     // Dialog
@@ -48,14 +49,13 @@ export function Profile(
         if (dialogType === "updateSponsoring") {
             let valueAsNumber = parseFloat(value);
             if (isNaN(valueAsNumber)) {
-                alert("Invalid number");
+                setErrorText("Invalid number");
                 return;
             }
             updateSponsoring(dialogData, valueAsNumber);
         }
 
         if (dialogType === "addFavoriteXchgAddress") {
-            //alert("Add Favorite Xchg Address: " + value);
             addFavoriteXchgAddress(value);
         }
     }
@@ -68,7 +68,7 @@ export function Profile(
     const handleCloseEditFavoriteXchgAddressDialog = () => setEditFavoriteXchgAddressDialogOpen(false);
     const handleSubmitEditFavoriteXchgAddressDialog = (name: string, group: string, description: string) => {
         let xchgAddr = dialogData;
-        alert(xchgAddr + " Name: " + name + ", Group: " + group + ", Description: " + description);
+        setErrorText(xchgAddr + " Name: " + name + ", Group: " + group + ", Description: " + description);
         updateFavoriteXchgAddress(xchgAddr, name, group, description);
     }
     const updateFavDialog = (xchgAddr: string) => {
@@ -85,7 +85,7 @@ export function Profile(
     const handleSubmitProfileWithdrawDialog = (amount: string) => {
         let amountAsNumber = parseFloat(amount);
         if (isNaN(amountAsNumber)) {
-            alert("Invalid number");
+            setErrorText("Invalid number");
             return;
         }
         profileWithdraw(amountAsNumber);
@@ -103,7 +103,7 @@ export function Profile(
     const handleSubmitProfileDepositDialog = (amount: string) => {
         let amountAsNumber = parseFloat(amount);
         if (isNaN(amountAsNumber)) {
-            alert("Invalid number");
+            setErrorText("Invalid number");
             return;
         }
         profileDeposit(amountAsNumber);
@@ -157,7 +157,6 @@ export function Profile(
                 showOwner: true,
             },
         });
-        console.log("Fund Object: ", resultGetFund);
         let fields = getObjectFields(resultGetFund.data);
         return fields.profiles.fields.id.id;
     }
@@ -171,7 +170,6 @@ export function Profile(
                 showOwner: true,
             },
         });
-        console.log("Fund Object: ", resultGetFund);
         let fields = getObjectFields(resultGetFund.data);
         return fields.addresses.fields.id.id;
     }
@@ -193,7 +191,6 @@ export function Profile(
                 }
             }
         );
-        console.log("Xchg Address Object: ", resultGetXchgAddr);
 
         if (resultGetXchgAddr.data == null) {
             console.log("Xchg Address Object not found");
@@ -202,7 +199,6 @@ export function Profile(
 
         let fields = getObjectFields(resultGetXchgAddr.data);
         fields = fields.value.fields;
-        console.log("Xchg Address Fields: ", fields);
 
         let sponsors: SponsorXchgAddress[] = [];
 
@@ -235,7 +231,6 @@ export function Profile(
             sponsoredByMe: sponsoredByMe,
         }
 
-        console.log("XCHG_ADDR_OBJECT: ", xcgfAddrObject);
 
         return xcgfAddrObject;
     }
@@ -243,7 +238,7 @@ export function Profile(
     const getProfileObject = async () => {
         try {
             setProfileLoaded(false);
-            console.log("Get Profile Object", currentAccount);
+
             if (!currentAccount) {
                 console.log("Current Account not found");
                 return;
@@ -258,18 +253,16 @@ export function Profile(
                     }
                 }
             );
-            console.log("Profile Object: ", resultGetProfile);
-            setProfileLoaded(true);
 
             if (resultGetProfile.data == null) {
                 console.log("Profile Object not found");
                 setProfileNotFound(true);
+                setProfileLoaded(true);
                 return;
             }
 
             let fields = getObjectFields(resultGetProfile.data);
             fields = fields.value.fields;
-            console.log("Profile Fields: ", fields);
 
             let state: ProfileState = {
                 balance: fields.balance,
@@ -300,15 +293,12 @@ export function Profile(
                 state.favoriteXchgAddresses.push(favItem);
             }
 
-            console.log("State", state);
-
-            //let favoriteXchgAddresses = fields.value.fields.favoriteXchgAddresses.fields;
-            //console.log("Favorite Xchg Addresses: ", favoriteXchgAddresses);
-
+            setProfileLoaded(true);
             setProfileState(state);
         } catch (ex) {
-            console.log("Exception Error: ", ex);
+            setErrorText("Error: " + ex);
         }
+
     }
 
     const create_profile = async () => {
@@ -339,10 +329,10 @@ export function Profile(
 
                     reloadProfile();
 
-                    alert("OK");
+                    setErrorText("OK");
                 },
                 onError: (error) => {
-                    alert("Error: " + error);
+                    setErrorText("Error: " + error);
                 }
 
             },
@@ -362,7 +352,7 @@ export function Profile(
         console.log('coin', coin);
         // if coin is a DError
         if ('errorMessage' in coin) {
-            alert('Error: ' + coin.errorMessage);
+            setErrorText('Error: ' + coin.errorMessage);
             return;
         }
 
@@ -387,10 +377,10 @@ export function Profile(
 
                     reloadProfile();
 
-                    alert("OK");
+                    setErrorText("OK");
                 },
                 onError: (error) => {
-                    alert("Error: " + error);
+                    setErrorText("Error: " + error);
                 }
 
             },
@@ -408,7 +398,7 @@ export function Profile(
         console.log('coin', coin);
         // if coin is a DError
         if ('errorMessage' in coin) {
-            alert('Error: ' + coin.errorMessage);
+            setErrorText('Error: ' + coin.errorMessage);
             return;
         }
 
@@ -433,10 +423,10 @@ export function Profile(
                         },
                     });
                     reloadProfile();
-                    alert("OK");
+                    setErrorText("OK");
                 },
                 onError: (error) => {
-                    alert("Error: " + error);
+                    setErrorText("Error: " + error);
                 }
             },
         );
@@ -467,10 +457,10 @@ export function Profile(
                         },
                     });
                     reloadProfile();
-                    alert("OK");
+                    setErrorText("OK");
                 },
                 onError: (error) => {
-                    alert("Error: " + error);
+                    setErrorText("Error: " + error);
                 }
 
             },
@@ -519,10 +509,10 @@ export function Profile(
                     });
                     console.log("Effects: ", effects);
                     reloadProfile();
-                    alert("OK");
+                    setErrorText("OK");
                 },
                 onError: (error) => {
-                    alert("Error: " + error);
+                    setErrorText("Error: " + error);
                 }
 
             },
@@ -565,10 +555,10 @@ export function Profile(
                     });
                     console.log("Effects: ", effects);
                     reloadProfile();
-                    alert("OK");
+                    setErrorText("OK");
                 },
                 onError: (error) => {
-                    alert("Error: " + error);
+                    setErrorText("Error: " + error);
                 }
 
             },
@@ -604,10 +594,10 @@ export function Profile(
                     });
                     console.log("Effects: ", effects);
                     reloadProfile();
-                    alert("OK");
+                    setErrorText("OK");
                 },
                 onError: (error) => {
-                    alert("Error: " + error);
+                    setErrorText("Error: " + error);
                 }
 
             },
@@ -645,10 +635,10 @@ export function Profile(
                     });
                     console.log("Effects: ", effects);
                     reloadProfile();
-                    alert("OK");
+                    setErrorText("OK");
                 },
                 onError: (error) => {
-                    alert("Error: " + error);
+                    setErrorText("Error: " + error);
                 }
 
             },
@@ -692,10 +682,10 @@ export function Profile(
                     });
                     console.log("Effects: ", effects);
                     reloadProfile();
-                    alert("OK");
+                    setErrorText("OK");
                 },
                 onError: (error) => {
-                    alert("Error: " + error);
+                    setErrorText("Error: " + error);
                 }
 
             },
@@ -731,10 +721,10 @@ export function Profile(
                     });
                     console.log("Effects: ", effects);
                     reloadProfile();
-                    alert("OK");
+                    setErrorText("OK");
                 },
                 onError: (error) => {
-                    alert("Error: " + error);
+                    setErrorText("Error: " + error);
                 }
 
             },
@@ -778,16 +768,28 @@ export function Profile(
         navigator.clipboard.writeText(text);
     }
 
+    const numberWithCommas = (strNum: string) => {
+        let x = parseFloat(strNum);
+        return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    }
+
     return (
         <Flex direction='column' align='stretch'>
-            <Flex direction='column' align='stretch'>
-                <Flex direction='row' align='end'>
-                    <Flex style={{ fontSize: '12pt', fontFamily: 'Roboto Mono' }}>MY PROFILE</Flex>
+            {
+                errorText != '' &&
+                <Flex align='center' direction='row' style={{ color: '#F55', backgroundColor: '#FF000030', padding: '12px', marginTop: '12px', marginBottom: '12px' }}>
+                    <Flex style={{ fontWeight: 'bold' }}>{errorText}</Flex>
                     <Flex flexGrow='1'></Flex>
-                    <Button style={styles.button} onClick={() => getProfileObject()}>UPDATE</Button>
+                    <Container flexGrow='0' style={styles.lightButton} onClick={() => { setErrorText('') }}>CLOSE</Container>
                 </Flex>
-                <Flex>
-                    {profileLoaded ? <div></div> : <div>loading</div>}
+            }
+            <Flex direction='column' align='stretch'>
+                <Flex direction='row' align='center' justify='between'>
+                    <Flex style={{ fontSize: '12pt', fontFamily: 'Roboto Mono' }}>MY PROFILE</Flex>
+                    <Flex direction='column' flexGrow='1' style={{ textAlign: 'center' }} align='center'>
+                        {profileLoaded ? <div></div> : <Flex style={{textAlign: 'center'}}>loading</Flex>}
+                    </Flex>
+                    <Container style={{ flexGrow: '0', padding: '0px', fontSize: '20pt', cursor: 'pointer', textAlign: 'center' }} onClick={() => getProfileObject()}>⟳</Container>
                 </Flex>
 
                 {profileNotFound
@@ -808,33 +810,29 @@ export function Profile(
                 {profileLoaded && !profileNotFound &&
                     <Flex direction="column" gap="2">
                         <Flex direction="column" gap="2">
-                            <Flex direction='column' style={{ backgroundColor: '#222', border: '1px solid #555' }}>
+                            <Flex direction='column' style={{ backgroundColor: '#222', borderTop: '1px solid #777' }}>
                                 <Flex direction='row' align='center' style={{}}>
-                                    <Flex style={styles.suiAddr}>{shortAddress(currentAccount.address)}</Flex>
+                                    <Flex direction='column'>
+                                        <Flex style={styles.textBlockBalance}>{displayXchgBalance(profileState.balance)}</Flex>
+                                        <Flex style={{ marginLeft: '3px', fontSize: '10pt', color: '#777' }}>{numberWithCommas(profileState.balance)} bytes</Flex>
+                                    </Flex>
                                     <Flex flexGrow='1'></Flex>
-                                    <Button style={styles.button} onClick={() => profileDepositDialog()}>DEPOSIT</Button>
-                                </Flex>
-                                <Flex direction='row' align='center' style={{}}>
-                                    <Flex style={styles.textBlockBalance}>{displayXchgBalance(profileState.balance)}</Flex>
-                                    <Flex flexGrow='1'></Flex>
-                                    <Button style={styles.button} onClick={() => profileWithdrawDialog()}>WITHDRAW</Button>
-                                </Flex>
-                                <Flex direction='row' align='center' style={{}}>
-                                    <Flex style={styles.textBlock}>{profileState.balance} bytes</Flex>
-                                    <Flex flexGrow='1'></Flex>
+                                    <Container flexGrow='0' style={styles.depositButton} onClick={() => profileDepositDialog()}>DEPOSIT</Container>
+                                    <Flex style={{color: '#777'}}>|</Flex>
+                                    <Container flexGrow='0' style={styles.withdrawButton} onClick={() => profileWithdrawDialog()}>WITHDRAW</Container>
                                 </Flex>
                             </Flex>
                             <Flex direction='column'>
                                 <Flex direction='row' align='end'>
-                                    <Flex style={{ fontSize: '12pt' }}>FAVORITES</Flex>
-                                    <Flex flexGrow='1'></Flex>
-                                    <Button style={styles.button} onClick={() => addFavoriteXchgAddressDialog()}>ADD</Button>
+                                    <Flex style={{ fontSize: '12pt' }}>MY NODES</Flex>
+                                    
+                                    <Container flexGrow='0' style={styles.addToFavButton} onClick={() => addFavoriteXchgAddressDialog()}>ADD</Container>
                                 </Flex>
 
-                                <Flex direction="column" style={{ backgroundColor: "#222", border: '1px solid #777' }}>
+                                <Flex direction="column" style={{ backgroundColor: "#222", border: '0px solid #777' }}>
                                     {profileState.favoriteXchgAddresses.map((item, index) => (
                                         <Flex key={item.xchgAddr + "_" + index}
-                                            style={{ backgroundColor: "#222", border: '1px solid #777', margin: '0px', padding: '0px' }}
+                                            style={{ backgroundColor: "#222", borderTop: '1px solid #777', margin: '0px', paddingBottom: '24px' }}
                                             direction='column'>
                                             <Flex direction='row'>
                                                 <Flex direction='column'>
@@ -845,41 +843,43 @@ export function Profile(
                                                         <Flex style={styles.xchgAddr}>
                                                             {shortAddress(item.xchgAddr)}
                                                         </Flex>
-                                                        <Button style={styles.button} onClick={() => copyTextToClipboard(item.xchgAddr)}>COPY</Button>
+                                                        <Container style={{cursor: 'pointer'}} onClick={() => copyTextToClipboard(item.xchgAddr)}>❐ </Container>
                                                     </Flex>
-                                                    <Flex direction='row'>
+                                                    <Flex direction='row' align='center'>
                                                         <Flex style={styles.textBlock}>Name: {item.name}</Flex>
-                                                        <Button style={styles.button} onClick={() => updateFavDialog(item.xchgAddr)}>RENAME</Button>
+                                                        <Container style={styles.lightButton} onClick={() => updateFavDialog(item.xchgAddr)}>RENAME</Container>
                                                     </Flex>
-                                                    <Flex direction='row'>
+                                                    <Flex direction='row' align='center'>
                                                         <Flex style={styles.textBlock} >Balance: {item.balance}</Flex>
-                                                        <Button style={styles.button} onClick={() => depositToXchgAddress(item.xchgAddr)}>DEPOSIT</Button>
+                                                        <Container style={styles.lightButton} onClick={() => depositToXchgAddress(item.xchgAddr)}>DEPOSIT</Container>
                                                     </Flex>
                                                 </Flex>
                                                 <Flex flexGrow='1'></Flex>
                                                 <Flex direction='column'>
                                                     <Flex direction='column'>
-                                                        <Button style={styles.button} onClick={() => removeFavoriteXchgAddress(item.xchgAddr)}>REMOVE</Button>
+                                                        <Button style={styles.removeButton} onClick={() => removeFavoriteXchgAddress(item.xchgAddr)}>X</Button>
                                                     </Flex>
                                                 </Flex>
                                             </Flex>
                                             <Flex key={item.xchgAddr + "_" + index + "_sponsors"} direction='column'>
-                                                <Flex>Sponsors:</Flex>
                                                 {item.xchgAddrObject != null && item.xchgAddrObject.sponsors.map((sponsorItem, index) => (
                                                     sponsorItem.suiAddr == currentAccount.address &&
                                                     <Flex key={item.xchgAddr + "_sponsor_" + index} style={{}} direction='row' align='center'>
-                                                        <Flex flexGrow='1'></Flex>
-                                                        <Flex>{sponsorItem.virutalBalance} / {sponsorItem.limitPerDay}</Flex>
-                                                        <Button style={styles.button} onClick={() => updateSponsoringDialog(item.xchgAddr)}>UPDATE</Button>
-                                                        <Button style={styles.button} onClick={() => stopSponsoring(item.xchgAddr)}>STOP SPONSORING</Button>
-
+                                                        <Flex direction='column'>
+                                                            <Flex style={styles.textBlock}>Sponsoring limit:</Flex>
+                                                            <Container style={styles.lightButton} onClick={() => updateSponsoringDialog(item.xchgAddr)}>UPDATE LIMIT</Container>
+                                                        </Flex>
+                                                        <Flex direction='column'>
+                                                            <Flex style={styles.textBlock}>{sponsorItem.limitPerDay} bytes per day</Flex>
+                                                            <Container style={styles.lightButton} onClick={() => stopSponsoring(item.xchgAddr)}>STOP SPONSORING</Container>
+                                                        </Flex>
                                                     </Flex>
                                                 ))}
 
                                                 {
                                                     (item.xchgAddrObject == null || item.xchgAddrObject.sponsors.length == 0 || item.xchgAddrObject.sponsoredByMe == false) &&
                                                     <Flex style={{ color: '#777', fontSize: '10pt' }}>
-                                                        <Button style={styles.button} onClick={() => startSponsoring(item.xchgAddr)}>START SPONSORING</Button>
+                                                        <Container style={styles.lightButton} onClick={() => startSponsoring(item.xchgAddr)}>START SPONSORING</Container>
                                                     </Flex>
                                                 }
                                             </Flex>
@@ -929,8 +929,8 @@ export function Profile(
 const styles: Record<string, React.CSSProperties> = {
     button: {
         fontFamily: 'Roboto Mono',
-        margin: '6px',
-        padding: '6px',
+        margin: '3px',
+        padding: '3px',
         border: '1px solid #777',
         borderRadius: '5px',
         cursor: 'pointer',
@@ -938,23 +938,68 @@ const styles: Record<string, React.CSSProperties> = {
         color: '#fff',
         width: '100px',
     },
+    removeButton: {
+        fontFamily: 'Roboto Mono',
+        margin: '3px',
+        padding: '3px',
+        border: '1px solid #777',
+        borderRadius: '5px',
+        cursor: 'pointer',
+        backgroundColor: '#333',
+        color: '#fff',
+        width: '30px',
+    },
+    lightButton: {
+        fontFamily: 'Roboto Mono',
+        fontSize: '10pt',
+        margin: '0px',
+        padding: '3px',
+        cursor: 'pointer',
+        color: '#0AF',
+    },
+    depositButton: {
+        fontFamily: 'Roboto Mono',
+        fontSize: '12pt',
+        margin: '0px',
+        paddingRight: '12px',
+        cursor: 'pointer',
+        color: '#0AF',
+    },
+    withdrawButton: {
+        fontFamily: 'Roboto Mono',
+        fontSize: '12pt',
+        margin: '0px',
+        paddingLeft: '12px',
+        paddingRight: '12px',
+        cursor: 'pointer',
+        color: '#0AF',
+    },
+    addToFavButton: {
+        fontFamily: 'Roboto Mono',
+        fontSize: '12pt',
+        margin: '0px',
+        paddingLeft: '12px',
+        paddingRight: '12px',
+        cursor: 'pointer',
+        color: '#0AF',
+    },
     suiAddr: {
         fontFamily: 'Roboto Mono',
         color: '#AAA',
-        margin: '6px',
+        margin: '3px',
     },
     xchgAddr: {
         fontFamily: 'Roboto Mono',
         color: '#EEE',
-        margin: '6px',
+        margin: '3px',
     },
     textBlock: {
         fontFamily: 'Roboto Mono',
-        margin: '6px',
+        margin: '3px',
     },
     textBlockBalance: {
         fontFamily: 'Roboto Mono',
-        margin: '6px',
+        marginLeft: '3px',
         color: '#0F8',
         fontSize: '16pt',
     },

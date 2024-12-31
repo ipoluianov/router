@@ -9,7 +9,6 @@ import './customStyles.css'; // Импортируйте ваш CSS файл
 
 function App() {
 	const currentAccount = useCurrentAccount();
-	console.log('APP: currentAccount', currentAccount);
 	const path = window.location.pathname;
 	let content;
 	if (currentAccount != null) {
