@@ -53,5 +53,36 @@ const prepareCoin = async (suiClient: SuiClient, account: WalletAccount, tx: Tra
     return coin;
 }
 
+const totalCoins = async (suiClient: SuiClient, account: WalletAccount, coinType: string): (Promise<number>) => {
+    if (!account) {
+        return 0;
+    }
 
-export { prepareCoin };
+    const coinTypeParts = coinType.split('::');
+    if (coinTypeParts.length !== 3) {
+        return 0;
+    }
+
+    const coinSymbol = coinType.split('::')[2];
+
+    const { data: coins } = await suiClient.getCoins({
+        owner: account.address,
+        coinType: coinType,
+    });
+
+    if (coins.length === 0) {
+        return 0;
+    }
+
+    let totalBalance = 0n;
+    for (let i = 0; i < coins.length; i++) {
+        let balanceAsBitInt = BigInt(coins[i].balance);
+        totalBalance += balanceAsBitInt;
+    }
+
+    let totalBalanceAsString = totalBalance.toString();
+    return parseInt(totalBalanceAsString);
+}
+
+
+export { prepareCoin, totalCoins };

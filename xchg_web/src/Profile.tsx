@@ -25,6 +25,17 @@ export function Profile(
         own_routers: [],
     }
 
+    interface RouterInfo {
+        xchgAddr: string;
+        segment: string;
+        name: string;
+        owner: string;
+        ipAddr: string;
+        totalStakeAmount: bigint;
+        rewards: bigint;
+    }
+
+
     const counterPackageId = useNetworkVariable("counterPackageId");
     const suiClient = useSuiClient();
     const { mutate: signAndExecute } = useSignAndExecuteTransaction();
@@ -33,6 +44,10 @@ export function Profile(
     const [profileState, setProfileState] = useState(defaultProfileState);
     const [profileNotFound, setProfileNotFound] = useState(false);
     const [errorText, setErrorText] = useState('');
+    const [routerInfo, setRouterInfo] = useState([]);
+
+    const [processing, setProcessing] = useState(false);
+    const [processingName, setProcessingName] = useState('');
 
     ///////////////////////////////////////////////////////////////
     // Dialog
@@ -235,12 +250,56 @@ export function Profile(
         return xcgfAddrObject;
     }
 
+    const getRouterObject = async (xchgAddr: string) => {
+        let profilesTableId = await getRoutersTableId();
+        const resultGetRouter = await suiClient.getDynamicFieldObject(
+            {
+                parentId: profilesTableId,
+                name: {
+                    type: "address",
+                    value: xchgAddr
+                }
+            }
+        );
+        console.log("resultGetRouter: ", resultGetRouter);
+
+        var result: RouterInfo = {
+            xchgAddr: xchgAddr,
+            segment: resultGetRouter.data?.content.fields.value.fields.segment,
+            name: resultGetRouter.data?.content.fields.value.fields.name,
+            owner: resultGetRouter.data?.content.fields.value.fields.owner,
+            ipAddr: resultGetRouter.data?.content.fields.value.fields.ipAddr,
+            totalStakeAmount: resultGetRouter.data?.content.fields.value.fields.totalStakeAmount,
+            rewards: resultGetRouter.data?.content.fields.value.fields.rewards,
+        }
+
+        return result;
+    }
+
+    const getRoutersTableId = async () => {
+        let fundId = TESTNET_COUNTER_FUND_ID;
+        const resultGetFund = await suiClient.getObject({
+            id: fundId,
+            options: {
+                showContent: true,
+                showOwner: true,
+            },
+        });
+        console.log("Fund Object: ", resultGetFund);
+        let fields = getObjectFields(resultGetFund.data);
+        return fields.routers.fields.id.id;
+    }
+
     const getProfileObject = async () => {
         try {
+            setProcessing(true);
+            setProcessingName('loading profile');
             setProfileLoaded(false);
 
             if (!currentAccount) {
                 console.log("Current Account not found");
+                setProcessing(false);
+
                 return;
             }
             let profilesTableId = await getProfilesTableId();
@@ -258,6 +317,8 @@ export function Profile(
                 console.log("Profile Object not found");
                 setProfileNotFound(true);
                 setProfileLoaded(true);
+                setProcessing(false);
+
                 return;
             }
 
@@ -293,13 +354,27 @@ export function Profile(
                 state.favoriteXchgAddresses.push(favItem);
             }
 
+            let routers: RouterInfo[] = [];
+
+            for (let i = 0; i < fields.own_routers.length; i++) {
+                let item = fields.own_routers[i];
+                let routerObj = await getRouterObject(item);
+                routers.push(routerObj);
+                console.log("Router Item: ", routerObj);
+            }
+
+            setRouterInfo(routers);
+
             setProfileLoaded(true);
             setProfileState(state);
         } catch (ex) {
             setErrorText("Error: " + ex);
         }
 
+        setProcessing(false);
+
     }
+
 
     const create_profile = async () => {
         if (!currentAccount) {
@@ -344,6 +419,9 @@ export function Profile(
             return;
         }
 
+        setProcessing(true);
+        setProcessingName('depositing');
+
         const tx = new Transaction();
 
         let amountBigInt = BigInt(amount);
@@ -353,6 +431,7 @@ export function Profile(
         // if coin is a DError
         if ('errorMessage' in coin) {
             setErrorText('Error: ' + coin.errorMessage);
+            setProcessing(false);
             return;
         }
 
@@ -367,6 +446,7 @@ export function Profile(
             },
             {
                 onSuccess: async ({ digest }) => {
+                    setProcessing(false);
                     const { effects } = await suiClient.waitForTransaction({
                         digest: digest,
                         options: {
@@ -381,10 +461,13 @@ export function Profile(
                 },
                 onError: (error) => {
                     setErrorText("Error: " + error);
+                    setProcessing(false);
                 }
 
             },
         );
+
+
     }
 
     const depositToXchgAddress = async (xchgAddr: string) => {
@@ -605,6 +688,49 @@ export function Profile(
     }
 
 
+    const createRouter = async () => {
+        if (!currentAccount) {
+            return;
+        }
+
+        const tx = new Transaction();
+
+        tx.moveCall({
+            arguments: [
+                tx.object(TESTNET_COUNTER_FUND_ID),
+                tx.pure.u32(2),
+                tx.pure.string("name of router"),
+                tx.pure.string("192.168.0.1"),
+                tx.pure.address("0x5ded23a41eb84ec1f95b27d14222155f145a45e76a6377ae9cfcf754a4da9956"),
+            ],
+            target: `${counterPackageId}::fund::createRouter`,
+        });
+
+        signAndExecute(
+            {
+                transaction: tx,
+            },
+            {
+                onSuccess: async ({ digest }) => {
+                    const { effects } = await suiClient.waitForTransaction({
+                        digest: digest,
+                        options: {
+                            showEffects: true,
+                            showRawEffects: true,
+                        },
+                    });
+
+                    alert("OK");
+                },
+                onError: (error) => {
+                    alert("Error: " + error);
+                }
+
+            },
+        );
+    }
+
+
     const startSponsoring = async (xchgAddr: string) => {
         if (!currentAccount) {
             return;
@@ -731,6 +857,86 @@ export function Profile(
         );
     }
 
+    const addStake = async (xchgAddr: string) => {
+        if (!currentAccount) {
+            return;
+        }
+
+        const tx = new Transaction();
+
+        tx.moveCall({
+            arguments: [
+                tx.object(TESTNET_COUNTER_FUND_ID),
+                tx.pure.address(xchgAddr),
+                tx.pure.u64(1000),
+            ],
+            target: `${counterPackageId}::fund::addStake`,
+        });
+
+        signAndExecute(
+            {
+                transaction: tx,
+            },
+            {
+                onSuccess: async ({ digest }) => {
+                    const { effects } = await suiClient.waitForTransaction({
+                        digest: digest,
+                        options: {
+                            showEffects: true,
+                            showRawEffects: true,
+                        },
+                    });
+
+                    alert("OK");
+                },
+                onError: (error) => {
+                    alert("Error: " + error);
+                }
+
+            },
+        );
+    }
+
+    const removeStake = async (xchgAddr: string) => {
+        if (!currentAccount) {
+            return;
+        }
+
+        const tx = new Transaction();
+        tx.moveCall({
+            arguments: [
+                tx.object(TESTNET_COUNTER_FUND_ID),
+                tx.pure.address(xchgAddr),
+                tx.pure.u64(100),
+            ],
+            target: `${counterPackageId}::fund::removeStake`,
+        });
+
+        signAndExecute(
+            {
+                transaction: tx,
+            },
+            {
+                onSuccess: async ({ digest }) => {
+                    const { effects } = await suiClient.waitForTransaction({
+                        digest: digest,
+                        options: {
+                            showEffects: true,
+                            showRawEffects: true,
+                        },
+                    });
+
+                    alert("OK");
+                },
+                onError: (error) => {
+                    alert("Error: " + error);
+                }
+
+            },
+        );
+    }
+
+
     if (!currentAccount) {
         return <div>Loading account...</div>;
     }
@@ -787,7 +993,7 @@ export function Profile(
                 <Flex direction='row' align='center' justify='between'>
                     <Flex style={{ fontSize: '12pt', fontFamily: 'Roboto Mono' }}>MY PROFILE</Flex>
                     <Flex direction='column' flexGrow='1' style={{ textAlign: 'center' }} align='center'>
-                        {profileLoaded ? <div></div> : <Flex style={{textAlign: 'center'}}>loading</Flex>}
+                        {profileLoaded ? <div></div> : <Flex style={{ textAlign: 'center' }}>loading</Flex>}
                     </Flex>
                     <Container style={{ flexGrow: '0', padding: '0px', fontSize: '20pt', cursor: 'pointer', textAlign: 'center' }} onClick={() => getProfileObject()}>⟳</Container>
                 </Flex>
@@ -818,14 +1024,14 @@ export function Profile(
                                     </Flex>
                                     <Flex flexGrow='1'></Flex>
                                     <Container flexGrow='0' style={styles.depositButton} onClick={() => profileDepositDialog()}>DEPOSIT</Container>
-                                    <Flex style={{color: '#777'}}>|</Flex>
+                                    <Flex style={{ color: '#777' }}>|</Flex>
                                     <Container flexGrow='0' style={styles.withdrawButton} onClick={() => profileWithdrawDialog()}>WITHDRAW</Container>
                                 </Flex>
                             </Flex>
                             <Flex direction='column'>
                                 <Flex direction='row' align='end'>
                                     <Flex style={{ fontSize: '12pt' }}>MY NODES</Flex>
-                                    
+
                                     <Container flexGrow='0' style={styles.addToFavButton} onClick={() => addFavoriteXchgAddressDialog()}>ADD</Container>
                                 </Flex>
 
@@ -843,7 +1049,7 @@ export function Profile(
                                                         <Flex style={styles.xchgAddr}>
                                                             {shortAddress(item.xchgAddr)}
                                                         </Flex>
-                                                        <Container style={{cursor: 'pointer'}} onClick={() => copyTextToClipboard(item.xchgAddr)}>❐ </Container>
+                                                        <Container style={{ cursor: 'pointer' }} onClick={() => copyTextToClipboard(item.xchgAddr)}>❐ </Container>
                                                     </Flex>
                                                     <Flex direction='row' align='center'>
                                                         <Flex style={styles.textBlock}>Name: {item.name}</Flex>
@@ -891,6 +1097,58 @@ export function Profile(
 
                         </Flex>
 
+                        <Flex direction="column" gap="2">
+                            <Flex direction="column" gap="2">
+                                <Flex direction="column">
+                                    <Flex direction="row">
+                                        <Button
+                                            style={{ margin: '12px' }}
+                                            onClick={() => createRouter()}
+
+                                        >
+                                            CREATE ROUTER ACCOUNT
+                                        </Button>
+                                    </Flex>
+                                </Flex>
+                                <Flex>
+                                    ROUTERS ({routerInfo.length})
+                                </Flex>
+                                <Flex direction='column'>
+                                    {routerInfo?.map((item) => (
+                                        <Flex style={{
+                                            border: '1px solid white',
+                                            margin: '12px',
+                                            padding: '12px',
+                                        }}
+                                            key={item.xchgAddr} direction='column'>
+                                            <Flex>ID: {item.xchgAddr}</Flex>
+                                            <Flex>Segment: {item.segment}</Flex>
+                                            <Flex>Name: {item.name}</Flex>
+                                            <Flex>Owner: {item.owner}</Flex>
+                                            <Flex>IP Address: {item.ipAddr}</Flex>
+                                            <Flex>Total Stake Amount: {item.totalStakeAmount}</Flex>
+                                            <Flex>Rewards: {item.rewards}</Flex>
+                                            <Flex direction="row">
+                                                <Button
+                                                    style={{ margin: '12px' }}
+                                                    onClick={() => addStake(item.xchgAddr)}
+
+                                                > ADD STAKE
+                                                </Button>
+                                                <Button
+                                                    style={{ margin: '12px' }}
+                                                    onClick={() => removeStake(item.xchgAddr)}
+
+                                                > REMOVE STAKE
+                                                </Button>
+                                            </Flex>
+                                        </Flex>
+                                    ))}
+                                </Flex>
+                            </Flex>
+                        </Flex>
+
+
                         <Flex style={{ color: '#444444', fontSize: '10pt' }}>
                             0x5ded23a41eb84ec1f95b27d14222155f145a45e76a6377ae9cfcf754a4da9956
                         </Flex>
@@ -908,12 +1166,16 @@ export function Profile(
                         />
 
                         <ProfileWithdrawDialog
+                            totalCoins={profileState.balance}
                             isOpen={isProfileWithdrawDialogOpen}
                             onClose={handleCloseProfileWithdrawDialog}
                             onSubmit={handleSubmitProfileWithdrawDialog}
                         />
 
                         <ProfileDepositDialog
+                            suiClient={suiClient}
+                            account={currentAccount}
+                            coinType={TB_TYPE}
                             isOpen={isProfileDepositDialogOpen}
                             onClose={handleCloseProfileDepositDialog}
                             onSubmit={handleSubmitProfileDepositDialog}
@@ -922,11 +1184,29 @@ export function Profile(
                     </Flex>
                 }
             </Flex>
+            {
+                processing &&
+                <Flex hidden={false} style={styles.overlay}>
+                    {processingName}
+                </Flex>
+            }
         </Flex>
     );
 }
 
 const styles: Record<string, React.CSSProperties> = {
+    overlay: {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 1000,
+    },
     button: {
         fontFamily: 'Roboto Mono',
         margin: '3px',

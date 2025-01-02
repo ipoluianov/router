@@ -5,7 +5,7 @@ import { Network } from "./Network";
 import { Profile } from "./Profile";
 import { Fund } from "./Fund";
 import { CreateCounter } from "./CreateCounter";
-import './customStyles.css'; // Импортируйте ваш CSS файл
+import './customStyles.css';
 
 function App() {
 	const currentAccount = useCurrentAccount();
@@ -40,7 +40,8 @@ function App() {
 
 			<Flex maxWidth='600px' minWidth='600px' direction='column'>
 				<Flex direction='row' align='center' style={{borderBottom: '1px solid #777', marginBottom: '20px'}}>
-					<Flex style={styles.logo}>XCHG</Flex>
+					<Flex style={styles.logo1}>Θ</Flex>
+					<Flex style={styles.logo2}>xchg</Flex>
 					<Flex flexGrow='2'>
 					</Flex>
 					<Flex direction='column'>
@@ -86,9 +87,15 @@ const styles: Record<string, React.CSSProperties> = {
 		color: '#fff',
 		width: '100px',
 	},
-	logo: {
+	logo1: {
 		fontFamily: 'Roboto Mono',
-		fontSize: '24pt',
+		fontSize: '50pt',
+		color: '#0F8',
+	},
+	logo2: {
+		fontFamily: 'Roboto Mono',
+		fontSize: '50pt',
+		color: '#CCC',
 	}
 };
 
