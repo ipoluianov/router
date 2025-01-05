@@ -991,7 +991,7 @@ export function Profile(
             }
             <Flex direction='column' align='stretch'>
                 <Flex direction='row' align='center' justify='between'>
-                    <Flex style={{ fontSize: '12pt', fontFamily: 'Roboto Mono' }}>MY PROFILE</Flex>
+                    <Flex style={{ fontSize: '12pt', fontFamily: 'Roboto Mono' }}>BALANCE</Flex>
                     <Flex direction='column' flexGrow='1' style={{ textAlign: 'center' }} align='center'>
                         {profileLoaded ? <div></div> : <Flex style={{ textAlign: 'center' }}>loading</Flex>}
                     </Flex>
@@ -1030,7 +1030,7 @@ export function Profile(
                             </Flex>
                             <Flex direction='column'>
                                 <Flex direction='row' align='end'>
-                                    <Flex style={{ fontSize: '12pt' }}>MY NODES</Flex>
+                                    <Flex style={{ fontSize: '12pt' }}>NODES</Flex>
 
                                     <Container flexGrow='0' style={styles.addToFavButton} onClick={() => addFavoriteXchgAddressDialog()}>ADD</Container>
                                 </Flex>
@@ -1063,7 +1063,7 @@ export function Profile(
                                                 <Flex flexGrow='1'></Flex>
                                                 <Flex direction='column'>
                                                     <Flex direction='column'>
-                                                        <Button style={styles.removeButton} onClick={() => removeFavoriteXchgAddress(item.xchgAddr)}>X</Button>
+                                                        <Container style={styles.lightButton} onClick={() => removeFavoriteXchgAddress(item.xchgAddr)}>REMOVE</Container>
                                                     </Flex>
                                                 </Flex>
                                             </Flex>
@@ -1101,46 +1101,58 @@ export function Profile(
                             <Flex direction="column" gap="2">
                                 <Flex direction="column">
                                     <Flex direction="row">
-                                        <Button
-                                            style={{ margin: '12px' }}
-                                            onClick={() => createRouter()}
-
-                                        >
-                                            CREATE ROUTER ACCOUNT
-                                        </Button>
                                     </Flex>
                                 </Flex>
                                 <Flex>
-                                    ROUTERS ({routerInfo.length})
+                                    <Flex>
+                                        ROUTERS ({routerInfo.length})
+                                    </Flex>
+                                    <Flex>
+                                        <Container
+                                            style={styles.addToFavButton}
+                                            onClick={() => createRouter()}>
+                                            ADD
+                                        </Container>
+                                    </Flex>
                                 </Flex>
                                 <Flex direction='column'>
                                     {routerInfo?.map((item) => (
                                         <Flex style={{
-                                            border: '1px solid white',
-                                            margin: '12px',
-                                            padding: '12px',
+                                            borderTop: '1px solid #777',
+                                            backgroundColor: '#222',
+                                            margin: '0px',
+                                            padding: '0px',
                                         }}
                                             key={item.xchgAddr} direction='column'>
-                                            <Flex>ID: {item.xchgAddr}</Flex>
-                                            <Flex>Segment: {item.segment}</Flex>
-                                            <Flex>Name: {item.name}</Flex>
-                                            <Flex>Owner: {item.owner}</Flex>
-                                            <Flex>IP Address: {item.ipAddr}</Flex>
-                                            <Flex>Total Stake Amount: {item.totalStakeAmount}</Flex>
-                                            <Flex>Rewards: {item.rewards}</Flex>
+                                            <Flex>
+                                                <Flex style={styles.textBlock}>
+                                                    Address:
+                                                </Flex>
+                                                <Flex style={styles.xchgAddr}>
+                                                    {shortAddress(item.xchgAddr)}
+                                                </Flex>
+                                                <Container style={{ cursor: 'pointer' }} onClick={() => copyTextToClipboard(item.xchgAddr)}>❐ </Container>
+                                            </Flex>
+                                            <Flex style={styles.textBlock}>Segment: {item.segment}</Flex>
+                                            <Flex style={styles.textBlock}>Name: {item.name}</Flex>
+                                            <Flex style={styles.textBlock}>IP Address: {item.ipAddr}</Flex>
+                                            <Flex style={styles.textBlock}>Total Stake Amount: {item.totalStakeAmount}</Flex>
+                                            <Flex style={styles.textBlock}>Rewards: {item.rewards}</Flex>
                                             <Flex direction="row">
-                                                <Button
-                                                    style={{ margin: '12px' }}
+                                                <Container
+                                                    flexGrow='0'
+                                                    style={styles.lightButton}
                                                     onClick={() => addStake(item.xchgAddr)}
 
                                                 > ADD STAKE
-                                                </Button>
-                                                <Button
-                                                    style={{ margin: '12px' }}
+                                                </Container>
+                                                <Container
+                                                    flexGrow='0'
+                                                    style={styles.lightButton}
                                                     onClick={() => removeStake(item.xchgAddr)}
 
                                                 > REMOVE STAKE
-                                                </Button>
+                                                </Container>
                                             </Flex>
                                         </Flex>
                                     ))}

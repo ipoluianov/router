@@ -1,5 +1,5 @@
 import { ConnectButton, lightTheme, useCurrentAccount, WalletProvider } from "@mysten/dapp-kit";
-import { Box, Button, Container, Flex, Heading } from "@radix-ui/themes";
+import { Box, Button, Container, Flex, Heading, Link } from "@radix-ui/themes";
 import { Router } from "./Router";
 import { Network } from "./Network";
 import { Profile } from "./Profile";
@@ -39,9 +39,13 @@ function App() {
 		<Flex direction='column' align='center'>
 
 			<Flex maxWidth='600px' minWidth='600px' direction='column'>
-				<Flex direction='row' align='center' style={{borderBottom: '1px solid #777', marginBottom: '20px'}}>
-					<Flex style={styles.logo1}>Θ</Flex>
-					<Flex style={styles.logo2}>xchg</Flex>
+				<Flex direction='row' align='center' style={{ borderBottom: '1px solid #777', marginBottom: '20px' }}>
+					<Link href="/">
+						<Flex>
+							<Flex style={styles.logo1}>Θ</Flex>
+							<Flex style={styles.logo2}>xCHG</Flex>
+						</Flex>
+					</Link>
 					<Flex flexGrow='2'>
 					</Flex>
 					<Flex direction='column'>
@@ -89,12 +93,12 @@ const styles: Record<string, React.CSSProperties> = {
 	},
 	logo1: {
 		fontFamily: 'Roboto Mono',
-		fontSize: '50pt',
+		fontSize: '24pt',
 		color: '#0F8',
 	},
 	logo2: {
 		fontFamily: 'Roboto Mono',
-		fontSize: '50pt',
+		fontSize: '24pt',
 		color: '#CCC',
 	}
 };

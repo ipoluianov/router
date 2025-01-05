@@ -72,6 +72,10 @@ public struct Profile has store {
     sponsoredXchgAddresses: vector<address>,
 }
 
+// 18*10^18
+// 18 000 000 000 000 000 000
+// 10 000 000 000 000 000 000
+
 public struct Sponsor has store, drop {
     limitPerDay: u64,
     virtualBalance : u64,
@@ -158,7 +162,7 @@ public struct Router has store, drop {
     // Stake
     totalStakeAmount: u64,
     // Rewards
-    rewards: u64,
+    // rewards: u64,
 }
 
 public struct RouterInfo has store, drop {
@@ -401,7 +405,7 @@ public fun createRouter(f: &mut Fund, segment: u32, name: String, ipAddr: String
         owner: ctx.sender(),
         chequeIds: vec_set::empty(),
         totalStakeAmount: 0,
-        rewards: 0,
+        //rewards: 0,
     };
     f.routers.add(routerXchgAddr, router);
     internal_place_router_to_directors(f, routerXchgAddr, ctx);
@@ -414,7 +418,7 @@ public fun removeRouter(f: &mut Fund, routerXchgAddr: address, ctx: &mut TxConte
     let router = f.routers.borrow(routerXchgAddr);
     assert!(router.owner == ctx.sender(), ERR_XCHG_ROUTER_ADDR_NOT_FOUND);
     let routerAmount = router.totalStakeAmount;
-    let routerRewards = router.rewards;
+    // let routerRewards = router.rewards;
 
     // Modify profile
     let profile = internal_get_profile(f, ctx.sender(), ctx);
@@ -427,7 +431,7 @@ public fun removeRouter(f: &mut Fund, routerXchgAddr: address, ctx: &mut TxConte
         i = i + 1;
     };
 
-    profile.balance = profile.balance + routerAmount + routerRewards;
+    profile.balance = profile.balance + routerAmount;
 
     internal_remove_router_from_network(f, routerXchgAddr, ctx);
 }
