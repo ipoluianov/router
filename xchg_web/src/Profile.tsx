@@ -6,8 +6,8 @@ import { Transaction } from "@mysten/sui/transactions";
 import { Button, Container, Flex, Table } from "@radix-ui/themes";
 import { useNetworkVariable } from "./networkConfig";
 import { useEffect, useState } from "react";
-import { getObjectFields, shortAddress } from "./utils";
-import { TB_TYPE, TESTNET_COUNTER_FUND_ID } from "./constants";
+import { displayXchgBalance, getObjectFields, shortAddress } from "./utils";
+import { GB_TYPE, TESTNET_COUNTER_FUND_ID } from "./constants";
 import type { WalletAccount } from '@mysten/wallet-standard';
 import TextInputDialog from "./TextInputDialog";
 import EditFavoriteXchgAddressDialog from "./EditFavoriteXchgAddressDialog";
@@ -16,6 +16,7 @@ import ProfileDepositDialog from "./ProfileDepositDialog";
 import { prepareCoin } from "./prepare_coin";
 import AddStakeDialog from "./AddStakeDialog";
 import RemoveStakeDialog from "./RemoveStakeDialog";
+import AddressDepositDialog from "./AddressDepositDialog";
 
 export function Profile(
     { currentAccount, }: { currentAccount: WalletAccount }
@@ -81,6 +82,7 @@ export function Profile(
     ///////////////////////////////////////////////////////////////
     // EditFavoriteXchgAddressDialog
     const [isEditFavoriteXchgAddressDialogOpen, setEditFavoriteXchgAddressDialogOpen] = useState(false);
+    const [editFavoriteXchgAddressDialogData, setEditFavoriteXchgAddressDialogData] = useState('');
     const handleOpenEditFavoriteXchgAddressDialog = () => setEditFavoriteXchgAddressDialogOpen(true);
     const handleCloseEditFavoriteXchgAddressDialog = () => setEditFavoriteXchgAddressDialogOpen(false);
     const handleSubmitEditFavoriteXchgAddressDialog = (name: string, group: string, description: string) => {
@@ -88,8 +90,9 @@ export function Profile(
         setErrorText(xchgAddr + " Name: " + name + ", Group: " + group + ", Description: " + description);
         updateFavoriteXchgAddress(xchgAddr, name, group, description);
     }
-    const updateFavDialog = (xchgAddr: string) => {
+    const updateFavDialog = (xchgAddr: string, name: string) => {
         setDialogData(xchgAddr);
+        setEditFavoriteXchgAddressDialogData(name);
         handleOpenEditFavoriteXchgAddressDialog();
     }
     ///////////////////////////////////////////////////////////////
@@ -166,6 +169,25 @@ export function Profile(
     }
     const profileDepositDialog = () => {
         handleOpenProfileDepositDialog();
+    }
+    ///////////////////////////////////////////////////////////////
+
+    ///////////////////////////////////////////////////////////////
+    // AddressDepositDialog
+    const [isAddressDepositDialogOpen, setAddressDepositDialogOpen] = useState(false);
+    const handleOpenAddressDepositDialog = () => setAddressDepositDialogOpen(true);
+    const handleCloseAddressDepositDialog = () => setAddressDepositDialogOpen(false);
+    const handleSubmitAddressDepositDialog = (amount: string) => {
+        let amountAsNumber = parseFloat(amount);
+        if (isNaN(amountAsNumber)) {
+            setErrorText("Invalid number");
+            return;
+        }
+        depositToXchgAddress(dialogData, amountAsNumber);
+    }
+    const addressDepositDialog = (xchgAddr: string) => {
+        setDialogData(xchgAddr);
+        handleOpenAddressDepositDialog();
     }
     ///////////////////////////////////////////////////////////////
 
@@ -467,7 +489,7 @@ export function Profile(
 
         let amountBigInt = BigInt(amount);
 
-        const coin = await prepareCoin(suiClient, currentAccount, tx, TB_TYPE, amountBigInt);
+        const coin = await prepareCoin(suiClient, currentAccount, tx, GB_TYPE, amountBigInt);
         console.log('coin', coin);
         // if coin is a DError
         if ('errorMessage' in coin) {
@@ -511,14 +533,14 @@ export function Profile(
 
     }
 
-    const depositToXchgAddress = async (xchgAddr: string) => {
+    const depositToXchgAddress = async (xchgAddr: string, amount: number) => {
         if (!currentAccount) {
             return;
         }
 
         const tx = new Transaction();
 
-        const coin = await prepareCoin(suiClient, currentAccount, tx, TB_TYPE, 10000000000n);
+        const coin = await prepareCoin(suiClient, currentAccount, tx, GB_TYPE, BigInt(amount));
         console.log('coin', coin);
         // if coin is a DError
         if ('errorMessage' in coin) {
@@ -986,34 +1008,6 @@ export function Profile(
         return <div>Loading account...</div>;
     }
 
-    const displayXchgBalance = (balanceStr: string) => {
-        let balance = parseFloat(balanceStr);
-        if (isNaN(balance)) {
-            balance = 0;
-        }
-        if (balance < 0) {
-            balance = 0;
-        }
-
-        let balanceFormatted = '---';
-        if (balance >= 0 && balance < 1000) {
-            balanceFormatted = balance + ' bytes';
-        }
-        if (balance >= 1000 && balance < 1000000) {
-            balanceFormatted = (balance / 1000).toFixed(3) + ' KB';
-        }
-        if (balance >= 1000000 && balance < 1000000000) {
-            balanceFormatted = (balance / 1000000).toFixed(3) + ' MB';
-        }
-        if (balance >= 1000000000 && balance < 1000000000000) {
-            balanceFormatted = (balance / 1000000000).toFixed(3) + ' GB';
-        }
-        if (balance >= 1000000000000) {
-            balanceFormatted = (balance / 1000000000000).toFixed(3) + ' TB';
-        }
-
-        return balanceFormatted;
-    }
 
     const copyTextToClipboard = (text: string) => {
         navigator.clipboard.writeText(text);
@@ -1098,11 +1092,11 @@ export function Profile(
                                                     </Flex>
                                                     <Flex direction='row' align='center'>
                                                         <Flex style={styles.textBlock}>Name: {item.name}</Flex>
-                                                        <Container style={styles.lightButton} onClick={() => updateFavDialog(item.xchgAddr)}>RENAME</Container>
+                                                        <Container style={styles.lightButton} onClick={() => updateFavDialog(item.xchgAddr, item.name)}>RENAME</Container>
                                                     </Flex>
                                                     <Flex direction='row' align='center'>
-                                                        <Flex style={styles.textBlock} >Balance: {item.balance}</Flex>
-                                                        <Container style={styles.lightButton} onClick={() => depositToXchgAddress(item.xchgAddr)}>DEPOSIT</Container>
+                                                        <Flex style={styles.textBlock} >Balance: {displayXchgBalance(item.balance)}</Flex>
+                                                        <Container style={styles.lightButton} onClick={() => addressDepositDialog(item.xchgAddr)}>DEPOSIT</Container>
                                                     </Flex>
                                                 </Flex>
                                                 <Flex flexGrow='1'></Flex>
@@ -1217,6 +1211,7 @@ export function Profile(
                             onSubmit={handleSubmit}
                         />
                         <EditFavoriteXchgAddressDialog
+                            currentName={editFavoriteXchgAddressDialogData}
                             isOpen={isEditFavoriteXchgAddressDialogOpen}
                             onClose={handleCloseEditFavoriteXchgAddressDialog}
                             onSubmit={handleSubmitEditFavoriteXchgAddressDialog}
@@ -1246,10 +1241,19 @@ export function Profile(
                         <ProfileDepositDialog
                             suiClient={suiClient}
                             account={currentAccount}
-                            coinType={TB_TYPE}
+                            coinType={GB_TYPE}
                             isOpen={isProfileDepositDialogOpen}
                             onClose={handleCloseProfileDepositDialog}
                             onSubmit={handleSubmitProfileDepositDialog}
+                        />
+
+                        <AddressDepositDialog
+                            suiClient={suiClient}
+                            account={currentAccount}
+                            coinType={GB_TYPE}
+                            isOpen={isAddressDepositDialogOpen}
+                            onClose={handleCloseAddressDepositDialog}
+                            onSubmit={handleSubmitAddressDepositDialog}
                         />
 
                     </Flex>

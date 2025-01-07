@@ -30,7 +30,7 @@ export function Router() {
 
     const [waitingForTxn, setWaitingForTxn] = useState("");
 
-    const TB_TYPE = '0x79e972d497be7e3e4571693f428dcb1d49bd576c99f32dbe992c35284a83a7bf::tb::TB';
+    const GB_TYPE = '0x79e972d497be7e3e4571693f428dcb1d49bd576c99f32dbe992c35284a83a7bf::tb::TB';
     const prepareCoin = async (account: WalletAccount, tx: Transaction, coinType: string, amount: bigint): (Promise<TransactionResult | DError>) => {
         if (!account) {
             return makeError("No account");
@@ -120,7 +120,7 @@ export function Router() {
 
         const tx = new Transaction();
 
-        const coin = await prepareCoin(currentAccount, tx, TB_TYPE, 2000000000n);
+        const coin = await prepareCoin(currentAccount, tx, GB_TYPE, 2000000000n);
         console.log('coin', coin);
         // if coin is a DError
         if ('errorMessage' in coin) {

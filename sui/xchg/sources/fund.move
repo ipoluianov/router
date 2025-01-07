@@ -33,7 +33,7 @@ public struct LogEvent has copy, drop {
 public struct Fund has key, store {
 	id: UID,
 	counter: u64,
-    balance: balance::Balance<tbtoken::tb::TB>,
+    balance: balance::Balance<gbtoken::gb::GB>,
 
     commonFund: u64,
 
@@ -216,7 +216,7 @@ public fun create_profile(f: &mut Fund, ctx: &mut TxContext) {
     internal_get_profile(f, ctx.sender(), ctx);
 }
 
-public fun depositToProfile(f: &mut Fund, payment: Coin<tbtoken::tb::TB>, ctx: &mut TxContext) {
+public fun depositToProfile(f: &mut Fund, payment: Coin<gbtoken::gb::GB>, ctx: &mut TxContext) {
     let value = payment.value();
     coin::put(&mut f.balance, payment);
     let profile = internal_get_profile(f, ctx.sender(), ctx);
@@ -224,7 +224,7 @@ public fun depositToProfile(f: &mut Fund, payment: Coin<tbtoken::tb::TB>, ctx: &
 }
 
 // Deposit to the XCHG address
-public fun depositToXchgAddr(f: &mut Fund, xchgAddr: address, payment: Coin<tbtoken::tb::TB>, ctx: &mut TxContext) {
+public fun depositToXchgAddr(f: &mut Fund, xchgAddr: address, payment: Coin<gbtoken::gb::GB>, ctx: &mut TxContext) {
     let value = payment.value();
     let xchgAddress = get_xchg_address(f, xchgAddr, ctx.sender());
     xchgAddress.balance = xchgAddress.balance + value;
@@ -670,7 +670,6 @@ public fun removeStake(f: &mut Fund, routerXchgAddr: address, stake: u64, ctx: &
 
     router.totalStakeAmount = router.totalStakeAmount - stake;
     profile.balance = profile.balance + stake;
-
 
     internal_place_router_to_directors(f, routerXchgAddr, ctx);
     internal_place_router_to_network(f,routerXchgAddr, ctx);

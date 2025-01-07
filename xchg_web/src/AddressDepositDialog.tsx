@@ -1,23 +1,28 @@
-import { Container, Flex } from '@radix-ui/themes';
 import React, { useState } from 'react';
+import { totalCoins } from './prepare_coin';
+import { SuiClient } from '@mysten/sui/client';
+import type { WalletAccount } from '@mysten/wallet-standard';
+import { Button, Container, Flex } from '@radix-ui/themes';
 import { displayXchgBalance } from './utils';
 
-type ProfileWithdrawDialogProps = {
-    totalCoins: string;
+
+type AddressDepositDialogProps = {
+    suiClient: SuiClient;
+    account: WalletAccount;
+    coinType: string;
     isOpen: boolean;
     onClose: () => void;
     onSubmit: (amount: string) => void;
 };
 
-const ProfileWithdrawDialog: React.FC<ProfileWithdrawDialogProps> = ({ totalCoins, isOpen, onClose, onSubmit }) => {
+const AddressDepositDialog: React.FC<AddressDepositDialogProps> = ({ suiClient, account, coinType, isOpen, onClose, onSubmit }) => {
     const [amountValue, setAmountValue] = useState('');
-
     const [balance, setBalance] = useState(0);
     const [lastIsOpen, setLastIsOpen] = useState(false);
 
     const loadTotalCoins = async () => {
-        let balanceAsNumber = parseFloat(totalCoins);
-        setBalance(balanceAsNumber);
+        let balance = await totalCoins(suiClient, account, coinType);
+        setBalance(balance);
     }
 
     if (isOpen && !lastIsOpen) {
@@ -30,7 +35,6 @@ const ProfileWithdrawDialog: React.FC<ProfileWithdrawDialogProps> = ({ totalCoin
         return null;
     }
 
-
     if (!isOpen) return null;
 
     const handleMax = () => {
@@ -40,7 +44,6 @@ const ProfileWithdrawDialog: React.FC<ProfileWithdrawDialogProps> = ({ totalCoin
     const handleHalf = () => {
         setAmountValue((balance / 2).toString());
     }
-
 
     const handleOK = () => {
         let amountValueNum = parseFloat(amountValue);
@@ -62,7 +65,7 @@ const ProfileWithdrawDialog: React.FC<ProfileWithdrawDialogProps> = ({ totalCoin
     return (
         <div style={styles.overlay}>
             <div style={styles.dialog}>
-                <h3> Profile Withdraw </h3>
+                <h3>Deposit to XCHG-address</h3>
                 <Flex style={{}}>Balance: {displayXchgBalance(balance.toString())} </Flex>
                 <input
                     type="text"
@@ -80,14 +83,14 @@ const ProfileWithdrawDialog: React.FC<ProfileWithdrawDialogProps> = ({ totalCoin
                     </Container>
                 </Flex>
 
-                <div style={styles.buttons}>
-                    <button onClick={handleOK} style={styles.button}>
+                <Flex style={styles.buttons}>
+                    <Button onClick={handleOK} style={styles.button}>
                         OK
-                    </button>
-                    <button onClick={handleCancel} style={styles.button}>
+                    </Button>
+                    <Button onClick={handleCancel} style={styles.button}>
                         Cancel
-                    </button>
-                </div>
+                    </Button>
+                </Flex>
             </div>
         </div>
     );
@@ -117,6 +120,7 @@ const styles: Record<string, React.CSSProperties> = {
         width: '50px',
     },
 
+
     overlay: {
         position: 'fixed',
         top: 0,
@@ -140,7 +144,7 @@ const styles: Record<string, React.CSSProperties> = {
     input: {
         width: '100%',
         padding: '10px',
-        marginBottom: '20px',
+        marginBottom: '0px',
         border: '1px solid #ccc',
         borderRadius: '5px',
     },
@@ -150,4 +154,4 @@ const styles: Record<string, React.CSSProperties> = {
     },
 };
 
-export default ProfileWithdrawDialog;
+export default AddressDepositDialog;

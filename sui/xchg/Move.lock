@@ -2,11 +2,11 @@
 
 [move]
 version = 3
-manifest_digest = "3AADA2D3DC22F340F35C14664134AD11E33E347287F59A7C6266560140B99979"
+manifest_digest = "24092E990A4E5C7CCD632E7A2DDBF9FC286B550D325F27AFD7130613DAE5C6E4"
 deps_digest = "3C4103934B1E040BB6B23F1D610B4EF9F2F1166A50A104EADCF77467C004C600"
 dependencies = [
   { id = "Sui", name = "Sui" },
-  { id = "tbtoken", name = "tbtoken" },
+  { id = "gbtoken", name = "gbtoken" },
 ]
 
 [[move.package]]
@@ -22,8 +22,8 @@ dependencies = [
 ]
 
 [[move.package]]
-id = "tbtoken"
-source = { local = "../tbtoken" }
+id = "gbtoken"
+source = { local = "../gbtoken" }
 
 dependencies = [
   { id = "Sui", name = "Sui" },
@@ -38,6 +38,6 @@ flavor = "sui"
 
 [env.test]
 chain-id = "4c78adac"
-original-published-id = "0x0fd394957b90c203cde3754679b04fb02ca37adcbced36a71384211731da82e7"
-latest-published-id = "0x0fd394957b90c203cde3754679b04fb02ca37adcbced36a71384211731da82e7"
+original-published-id = "0x3bf48e3d88ffee13b73d411e22b2cdea6f03b620b752909d6a12a42b1ad8296c"
+latest-published-id = "0x3bf48e3d88ffee13b73d411e22b2cdea6f03b620b752909d6a12a42b1ad8296c"
 published-version = "1"

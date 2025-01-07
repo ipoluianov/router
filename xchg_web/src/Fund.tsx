@@ -10,7 +10,7 @@ import { useEffect, useState } from "react";
 import ClipLoader from "react-spinners/ClipLoader";
 import { getObjectFields, shortAddress } from "./utils";
 import { decryptMessage, encryptMessage } from "./aes";
-import { TB_TYPE, TESTNET_COUNTER_FUND_ID } from "./constants";
+import { GB_TYPE, TESTNET_COUNTER_FUND_ID } from "./constants";
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import { makeError } from "./error";
 

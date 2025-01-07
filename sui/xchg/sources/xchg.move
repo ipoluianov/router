@@ -20,7 +20,7 @@ fun init(otw: XCHG, ctx: &mut TxContext) {
         b"https://xchg.network/".to_string(),
         b"https://xchg.network/public/icons/logo64.png".to_string(),
         b"Peer-To-Peer Network".to_string(),
-        b"hhttps://xchg.network/".to_string(),
+        b"https://xchg.network/".to_string(),
         b"XCHG Creator".to_string(),
     ];
 

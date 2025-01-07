@@ -30,7 +30,7 @@ export function Network() {
 
     const [waitingForTxn, setWaitingForTxn] = useState("");
 
-    const TB_TYPE = '0x79e972d497be7e3e4571693f428dcb1d49bd576c99f32dbe992c35284a83a7bf::tb::TB';
+    const GB_TYPE = '0x79e972d497be7e3e4571693f428dcb1d49bd576c99f32dbe992c35284a83a7bf::tb::TB';
     const prepareCoin = async (account: WalletAccount, tx: Transaction, coinType: string, amount: bigint): (Promise<TransactionResult | DError>) => {
         if (!account) {
             return makeError("No account");

@@ -1,15 +1,33 @@
 import React, { useState } from 'react';
 
 type EditFavoriteXchgAddressDialogProps = {
+  currentName: string;
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (name: string, group: string, description: string) => void;
 };
 
-const EditFavoriteXchgAddressDialog: React.FC<EditFavoriteXchgAddressDialogProps> = ({ isOpen, onClose, onSubmit }) => {
+const EditFavoriteXchgAddressDialog: React.FC<EditFavoriteXchgAddressDialogProps> = ({ currentName, isOpen, onClose, onSubmit }) => {
   const [nameValue, setNameValue] = useState('');
   const [groupValue, setGroupValue] = useState('');
   const [descriptionValue, setDescriptionValue] = useState('');
+  const [lastIsOpen, setLastIsOpen] = useState(false);
+
+  console.log('EditFavoriteXchgAddressDialog', currentName);
+
+  if (isOpen && !lastIsOpen) {
+    setLastIsOpen(true);
+    // async set name with timout
+    setTimeout(() => {
+      setNameValue(currentName);
+    }, 10);
+  }
+
+  if (!isOpen && lastIsOpen) {
+    setLastIsOpen(false);
+    return null;
+  }
+
 
   if (!isOpen) return null;
 
@@ -37,20 +55,6 @@ const EditFavoriteXchgAddressDialog: React.FC<EditFavoriteXchgAddressDialogProps
           placeholder='Name'
           value={nameValue}
           onChange={(e) => setNameValue(e.target.value)}
-          style={styles.input}
-        />
-        <input
-          type="text"
-          placeholder='Group'
-          value={groupValue}
-          onChange={(e) => setGroupValue(e.target.value)}
-          style={styles.input}
-        />
-        <input
-          type="text"
-          placeholder='Description'
-          value={descriptionValue}
-          onChange={(e) => setDescriptionValue(e.target.value)}
           style={styles.input}
         />
         <div style={styles.buttons}>

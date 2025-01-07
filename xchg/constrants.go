@@ -2,7 +2,7 @@ package xchg
 
 const (
 	TESTNET_URL     = "https://fullnode.testnet.sui.io:443"
-	PACKAGE_ID      = "0x0fd394957b90c203cde3754679b04fb02ca37adcbced36a71384211731da82e7"
-	FUND_OBJECT_ID  = "0x3349b971e33f57214f2e0fb82d39ce5f1906083b3a8360f0da9cf6976f7fd36e"
+	PACKAGE_ID      = "0x3bf48e3d88ffee13b73d411e22b2cdea6f03b620b752909d6a12a42b1ad8296c"
+	FUND_OBJECT_ID  = "0xca3cba02aadbb4da8a49fe3208ffa5f9c72ca491bb300358328a2e52d6730895"
 	CLOCK_OBJECT_ID = "0x6"
 )

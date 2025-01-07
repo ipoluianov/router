@@ -3,6 +3,7 @@ import { totalCoins } from './prepare_coin';
 import { SuiClient } from '@mysten/sui/client';
 import type { WalletAccount } from '@mysten/wallet-standard';
 import { Button, Container, Flex } from '@radix-ui/themes';
+import { displayXchgBalance } from './utils';
 
 
 type ProfileDepositDialogProps = {
@@ -45,7 +46,13 @@ const ProfileDepositDialog: React.FC<ProfileDepositDialogProps> = ({ suiClient, 
     }
 
     const handleOK = () => {
-        onSubmit(amountValue);
+        let amountValueNum = parseFloat(amountValue);
+        if (isNaN(amountValueNum)) {
+            alert('Invalid amount');
+            return;
+        }
+        let amountValueStr = (amountValueNum * 1000000000).toString();
+        onSubmit(amountValueStr);
         setAmountValue('0');
         onClose();
     };
@@ -59,7 +66,7 @@ const ProfileDepositDialog: React.FC<ProfileDepositDialogProps> = ({ suiClient, 
         <div style={styles.overlay}>
             <div style={styles.dialog}>
                 <h3>Deposit to profile</h3>
-                <Flex style={{}}>Balance: {balance} </Flex>
+                <Flex style={{}}>Balance: {displayXchgBalance(balance.toString())} </Flex>
                 <input
                     type="text"
                     placeholder='Amount'
