@@ -17,6 +17,7 @@ import { prepareCoin } from "./prepare_coin";
 import AddStakeDialog from "./AddStakeDialog";
 import RemoveStakeDialog from "./RemoveStakeDialog";
 import AddressDepositDialog from "./AddressDepositDialog";
+import AddRouterDialog from "./AddRouterDialog";
 
 export function Profile(
     { currentAccount, }: { currentAccount: WalletAccount }
@@ -94,6 +95,21 @@ export function Profile(
         setDialogData(xchgAddr);
         setEditFavoriteXchgAddressDialogData(name);
         handleOpenEditFavoriteXchgAddressDialog();
+    }
+    ///////////////////////////////////////////////////////////////
+
+        ///////////////////////////////////////////////////////////////
+    // AddRouterDialog
+    const [isAddRouterDialogOpen, setAddRouterDialogOpen] = useState(false);
+    const handleOpenAddRouterDialog = () => setAddRouterDialogOpen(true);
+    const handleCloseAddRouterDialog = () => setAddRouterDialogOpen(false);
+    const handleSubmitAddRouterDialog = (xchgAddr: string, segment: string, name: string, ipAddr: string) => {
+        setErrorText(xchgAddr + "Segment:" + segment + " Name: " + name + ", IP: " + ipAddr);
+        //updateFavoriteXchgAddress(xchgAddr, name, group, description);
+        createRouter(xchgAddr, segment, name, ipAddr);
+    }
+    const addRouterDialog = () => {
+        handleOpenAddRouterDialog();
     }
     ///////////////////////////////////////////////////////////////
 
@@ -751,20 +767,26 @@ export function Profile(
     }
 
 
-    const createRouter = async () => {
+    const createRouter = async (xchgAddr: string, segment: string, name: string, ipAddr: string) => {
         if (!currentAccount) {
             return;
         }
 
         const tx = new Transaction();
 
+        let segmentNum = parseInt(segment);
+        if (isNaN(segmentNum)) {
+            setErrorText("Invalid segment");
+            return;
+        }
+
         tx.moveCall({
             arguments: [
                 tx.object(TESTNET_COUNTER_FUND_ID),
-                tx.pure.u32(2),
-                tx.pure.string("name of router"),
-                tx.pure.string("192.168.0.1"),
-                tx.pure.address("0x5ded23a41eb84ec1f95b27d14222155f145a45e76a6377ae9cfcf754a4da9956"),
+                tx.pure.u32(segmentNum),
+                tx.pure.string(name),
+                tx.pure.string(ipAddr),
+                tx.pure.address(xchgAddr),
             ],
             target: `${counterPackageId}::fund::createRouter`,
         });
@@ -1149,7 +1171,7 @@ export function Profile(
                                     <Flex>
                                         <Container
                                             style={styles.addToFavButton}
-                                            onClick={() => createRouter()}>
+                                            onClick={() => addRouterDialog()}>
                                             ADD
                                         </Container>
                                     </Flex>
@@ -1210,11 +1232,18 @@ export function Profile(
                             onClose={handleCloseDialog}
                             onSubmit={handleSubmit}
                         />
+
                         <EditFavoriteXchgAddressDialog
                             currentName={editFavoriteXchgAddressDialogData}
                             isOpen={isEditFavoriteXchgAddressDialogOpen}
                             onClose={handleCloseEditFavoriteXchgAddressDialog}
                             onSubmit={handleSubmitEditFavoriteXchgAddressDialog}
+                        />
+
+                        <AddRouterDialog
+                            isOpen={isAddRouterDialogOpen}
+                            onClose={handleCloseAddRouterDialog}
+                            onSubmit={handleSubmitAddRouterDialog}
                         />
 
                         <ProfileWithdrawDialog
