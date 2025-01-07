@@ -1175,7 +1175,7 @@ export function Profile(
                                             <Flex style={styles.textBlock}>Segment: {item.segment}</Flex>
                                             <Flex style={styles.textBlock}>Name: {item.name}</Flex>
                                             <Flex style={styles.textBlock}>IP Address: {item.ipAddr}</Flex>
-                                            <Flex style={styles.textBlock}>Total Stake Amount: {item.totalStakeAmount}</Flex>
+                                            <Flex style={styles.textBlock}>Total Stake Amount: {displayXchgBalance(item.totalStakeAmount)}</Flex>
                                             <Flex style={styles.textBlock}>Rewards: {item.rewards}</Flex>
                                             <Flex direction="row">
                                                 <Container

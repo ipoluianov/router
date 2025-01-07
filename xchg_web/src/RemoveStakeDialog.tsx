@@ -1,5 +1,6 @@
 import { Container, Flex } from '@radix-ui/themes';
 import React, { useState } from 'react';
+import { displayXchgBalance } from './utils';
 
 type RemoveStakeDialogProps = {
     totalCoins: string;
@@ -33,16 +34,22 @@ const RemoveStakeDialog: React.FC<RemoveStakeDialogProps> = ({ totalCoins, isOpe
     if (!isOpen) return null;
 
     const handleMax = () => {
-        setAmountValue(balance.toString());
+        setAmountValue((balance / 1000000000).toString());
     }
 
     const handleHalf = () => {
-        setAmountValue((balance / 2).toString());
+        setAmountValue((balance / 1000000000 / 2).toString());
     }
 
 
     const handleOK = () => {
-        onSubmit(amountValue);
+        let amountValueNum = parseFloat(amountValue);
+        if (isNaN(amountValueNum)) {
+            alert('Invalid amount');
+            return;
+        }
+        let amountValueStr = (amountValueNum * 1000000000).toString();
+        onSubmit(amountValueStr);
         setAmountValue('0');
         onClose();
     };
@@ -56,7 +63,7 @@ const RemoveStakeDialog: React.FC<RemoveStakeDialogProps> = ({ totalCoins, isOpe
         <div style={styles.overlay}>
             <div style={styles.dialog}>
                 <h3> Remove stake </h3>
-                <Flex style={{}}>Balance: {balance} </Flex>
+                <Flex style={{}}>Balance: {displayXchgBalance(balance.toString())} </Flex>
                 <input
                     type="text"
                     placeholder='Amount'

@@ -38,11 +38,11 @@ const ProfileDepositDialog: React.FC<ProfileDepositDialogProps> = ({ suiClient, 
     if (!isOpen) return null;
 
     const handleMax = () => {
-        setAmountValue(balance.toString());
+        setAmountValue((balance  / 1000000000).toString());
     }
 
     const handleHalf = () => {
-        setAmountValue((balance / 2).toString());
+        setAmountValue((balance / 1000000000 / 2).toString());
     }
 
     const handleOK = () => {

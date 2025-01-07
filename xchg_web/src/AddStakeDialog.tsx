@@ -1,5 +1,6 @@
 import { Container, Flex } from '@radix-ui/themes';
 import React, { useState } from 'react';
+import { displayXchgBalance } from './utils';
 
 type AddStakeDialogProps = {
     totalCoins: string;
@@ -33,16 +34,22 @@ const AddStakeDialog: React.FC<AddStakeDialogProps> = ({ totalCoins, isOpen, onC
     if (!isOpen) return null;
 
     const handleMax = () => {
-        setAmountValue(balance.toString());
+        setAmountValue((balance / 1000000000).toString());
     }
 
     const handleHalf = () => {
-        setAmountValue((balance / 2).toString());
+        setAmountValue((balance  / 1000000000 / 2).toString());
     }
 
 
     const handleOK = () => {
-        onSubmit(amountValue);
+        let amountValueNum = parseFloat(amountValue);
+        if (isNaN(amountValueNum)) {
+            alert('Invalid amount');
+            return;
+        }
+        let amountValueStr = (amountValueNum * 1000000000).toString();
+        onSubmit(amountValueStr);
         setAmountValue('0');
         onClose();
     };
@@ -56,7 +63,7 @@ const AddStakeDialog: React.FC<AddStakeDialogProps> = ({ totalCoins, isOpen, onC
         <div style={styles.overlay}>
             <div style={styles.dialog}>
                 <h3> Add stake </h3>
-                <Flex style={{}}>Balance: {balance} </Flex>
+                <Flex style={{}}>Balance: {displayXchgBalance(balance.toString())} </Flex>
                 <input
                     type="text"
                     placeholder='Amount'
@@ -64,6 +71,7 @@ const AddStakeDialog: React.FC<AddStakeDialogProps> = ({ totalCoins, isOpen, onC
                     onChange={(e) => setAmountValue(e.target.value)}
                     style={styles.input}
                 />
+
                 <Flex direction='row'>
                     <Container flexGrow='0' onClick={handleMax} style={styles.minmaxButton}>
                         MAX
