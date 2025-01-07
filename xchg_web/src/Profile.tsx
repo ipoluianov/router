@@ -14,6 +14,8 @@ import EditFavoriteXchgAddressDialog from "./EditFavoriteXchgAddressDialog";
 import ProfileWithdrawDialog from "./ProfileWithdrawDialog";
 import ProfileDepositDialog from "./ProfileDepositDialog";
 import { prepareCoin } from "./prepare_coin";
+import AddStakeDialog from "./AddStakeDialog";
+import RemoveStakeDialog from "./RemoveStakeDialog";
 
 export function Profile(
     { currentAccount, }: { currentAccount: WalletAccount }
@@ -109,6 +111,45 @@ export function Profile(
         handleOpenProfileWithdrawDialog();
     }
     ///////////////////////////////////////////////////////////////
+
+    ///////////////////////////////////////////////////////////////
+    // AddStakeDialog
+    const [isAddStakeDialogOpen, setAddStakeDialogOpen] = useState(false);
+    const handleOpenAddStakeDialog = () => setAddStakeDialogOpen(true);
+    const handleCloseAddStakeDialog = () => setAddStakeDialogOpen(false);
+    const handleSubmitAddStakeDialog = (amount: string) => {
+        let amountAsNumber = parseFloat(amount);
+        if (isNaN(amountAsNumber)) {
+            setErrorText("Invalid number");
+            return;
+        }
+        addStake(dialogData, amountAsNumber);
+    }
+    const addStakeDialog = (xchgAddr: string) => {
+        setDialogData(xchgAddr);
+        handleOpenAddStakeDialog();
+    }
+    ///////////////////////////////////////////////////////////////
+
+    ///////////////////////////////////////////////////////////////
+    // RemoveStakeDialog
+    const [isRemoveStakeDialogOpen, setRemoveStakeDialogOpen] = useState(false);
+    const handleOpenRemoveStakeDialog = () => setRemoveStakeDialogOpen(true);
+    const handleCloseRemoveStakeDialog = () => setRemoveStakeDialogOpen(false);
+    const handleSubmitRemoveStakeDialog = (amount: string) => {
+        let amountAsNumber = parseFloat(amount);
+        if (isNaN(amountAsNumber)) {
+            setErrorText("Invalid number");
+            return;
+        }
+        removeStake(dialogData, amountAsNumber);
+    }
+    const removeStakeDialog = (xchgAddr: string) => {
+        setDialogData(xchgAddr);
+        handleOpenRemoveStakeDialog();
+    }
+    ///////////////////////////////////////////////////////////////
+
 
     ///////////////////////////////////////////////////////////////
     // ProfileDepositDialog
@@ -857,7 +898,7 @@ export function Profile(
         );
     }
 
-    const addStake = async (xchgAddr: string) => {
+    const addStake = async (xchgAddr: string, amount: number) => {
         if (!currentAccount) {
             return;
         }
@@ -868,7 +909,7 @@ export function Profile(
             arguments: [
                 tx.object(TESTNET_COUNTER_FUND_ID),
                 tx.pure.address(xchgAddr),
-                tx.pure.u64(1000),
+                tx.pure.u64(amount),
             ],
             target: `${counterPackageId}::fund::addStake`,
         });
@@ -887,17 +928,19 @@ export function Profile(
                         },
                     });
 
-                    alert("OK");
+                    console.log("Effects: ", effects);
+                    reloadProfile();
+                    setErrorText("OK");
                 },
                 onError: (error) => {
-                    alert("Error: " + error);
+                    setErrorText("Error: " + error);
                 }
 
             },
         );
     }
 
-    const removeStake = async (xchgAddr: string) => {
+    const removeStake = async (xchgAddr: string, amount: number) => {
         if (!currentAccount) {
             return;
         }
@@ -907,7 +950,7 @@ export function Profile(
             arguments: [
                 tx.object(TESTNET_COUNTER_FUND_ID),
                 tx.pure.address(xchgAddr),
-                tx.pure.u64(100),
+                tx.pure.u64(amount),
             ],
             target: `${counterPackageId}::fund::removeStake`,
         });
@@ -926,10 +969,12 @@ export function Profile(
                         },
                     });
 
-                    alert("OK");
+                    console.log("Effects: ", effects);
+                    reloadProfile();
+                    setErrorText("OK");
                 },
                 onError: (error) => {
-                    alert("Error: " + error);
+                    setErrorText("Error: " + error);
                 }
 
             },
@@ -1142,14 +1187,14 @@ export function Profile(
                                                 <Container
                                                     flexGrow='0'
                                                     style={styles.lightButton}
-                                                    onClick={() => addStake(item.xchgAddr)}
+                                                    onClick={() => addStakeDialog(item.xchgAddr)}
 
                                                 > ADD STAKE
                                                 </Container>
                                                 <Container
                                                     flexGrow='0'
                                                     style={styles.lightButton}
-                                                    onClick={() => removeStake(item.xchgAddr)}
+                                                    onClick={() => removeStakeDialog(item.xchgAddr)}
 
                                                 > REMOVE STAKE
                                                 </Container>
@@ -1182,6 +1227,20 @@ export function Profile(
                             isOpen={isProfileWithdrawDialogOpen}
                             onClose={handleCloseProfileWithdrawDialog}
                             onSubmit={handleSubmitProfileWithdrawDialog}
+                        />
+
+                        <AddStakeDialog
+                            totalCoins={profileState.balance}
+                            isOpen={isAddStakeDialogOpen}
+                            onClose={handleCloseAddStakeDialog}
+                            onSubmit={handleSubmitAddStakeDialog}
+                        />
+
+                        <RemoveStakeDialog
+                            totalCoins={profileState.balance}
+                            isOpen={isRemoveStakeDialogOpen}
+                            onClose={handleCloseRemoveStakeDialog}
+                            onSubmit={handleSubmitRemoveStakeDialog}
                         />
 
                         <ProfileDepositDialog
