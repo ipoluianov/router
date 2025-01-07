@@ -396,18 +396,36 @@ public fun modifyFavoriteXchgAddress(f: &mut Fund, xchgAddr: address, name: Stri
 
 public fun createRouter(f: &mut Fund, segment: u32, name: String, ipAddr: String, routerXchgAddr: address, ctx: &mut TxContext) {
     let profile = internal_get_profile(f, ctx.sender(), ctx);
-    profile.own_routers.push_back(routerXchgAddr);
-    assert!(!f.routers.contains(routerXchgAddr), ERR_XCHG_ROUTER_ALREADY_EXISTS);
-    let router = Router {
-        segment: segment,
-        name: name,
-        ipAddr: ipAddr,
-        owner: ctx.sender(),
-        chequeIds: vec_set::empty(),
-        totalStakeAmount: 0,
-        //rewards: 0,
+    let mut i = 0;
+    let mut found = false;
+    while (i < profile.own_routers.length()) {
+        if (profile.own_routers[i] == routerXchgAddr) {
+            found = true;
+            break
+        };
+        i = i + 1;
     };
-    f.routers.add(routerXchgAddr, router);
+    assert!(!found, ERR_XCHG_ROUTER_ALREADY_EXISTS);
+    profile.own_routers.push_back(routerXchgAddr);
+
+    if (!f.routers.contains(routerXchgAddr)) {
+        let router = Router {
+            segment: segment,
+            name: name,
+            ipAddr: ipAddr,
+            owner: ctx.sender(),
+            chequeIds: vec_set::empty(),
+            totalStakeAmount: 0,
+        };
+        f.routers.add(routerXchgAddr, router);
+    } else {
+        let router = f.routers.borrow_mut(routerXchgAddr);
+        assert!(router.owner == ctx.sender(), ERR_XCHG_ROUTER_ADDR_NOT_FOUND);
+        router.segment = segment;
+        router.name = name;
+        router.ipAddr = ipAddr;
+    };
+
     internal_place_router_to_directors(f, routerXchgAddr, ctx);
     internal_place_router_to_network(f, routerXchgAddr, ctx);
 }
@@ -418,7 +436,6 @@ public fun removeRouter(f: &mut Fund, routerXchgAddr: address, ctx: &mut TxConte
     let router = f.routers.borrow(routerXchgAddr);
     assert!(router.owner == ctx.sender(), ERR_XCHG_ROUTER_ADDR_NOT_FOUND);
     let routerAmount = router.totalStakeAmount;
-    // let routerRewards = router.rewards;
 
     // Modify profile
     let profile = internal_get_profile(f, ctx.sender(), ctx);
@@ -433,6 +450,14 @@ public fun removeRouter(f: &mut Fund, routerXchgAddr: address, ctx: &mut TxConte
 
     profile.balance = profile.balance + routerAmount;
 
+    // Deactivate router
+    let routerToRemove = f.routers.borrow_mut(routerXchgAddr);
+    routerToRemove.chequeIds = vec_set::empty();
+    routerToRemove.ipAddr = string::utf8(b"");
+    routerToRemove.name = string::utf8(b"");
+    routerToRemove.segment = 0;
+    routerToRemove.totalStakeAmount = 0;
+    
     internal_remove_router_from_network(f, routerXchgAddr, ctx);
 }
 
@@ -785,14 +810,14 @@ fun internal_place_router_to_network(f: &mut Fund, routerAddress: address, _ctx:
     let network = f.network.borrow_mut(router.segment);
     let mut i = 0;
 
-    let mut indexToInsert = network.routers.length();
+    let mut indexToInsert = 0xFFFFFFFF;
 
     // Remove previous record
     while (i < network.routers.length()) {
         let routerInfo = network.routers.borrow(i);
         if (routerInfo.xchgAddress == routerAddress) {
             network.routers.remove(i);
-            event::emit(LogEvent{ text: string::utf8(b"place 1"), num: i});
+            event::emit(LogEvent{ text: string::utf8(b"fount to remove at index"), num: i});
             break
         };
         i = i + 1;
@@ -805,24 +830,34 @@ fun internal_place_router_to_network(f: &mut Fund, routerAddress: address, _ctx:
             let routerInfo = network.routers.borrow(i);
             if (router.totalStakeAmount > routerInfo.currentStake) {
                 indexToInsert = i;
+                event::emit(LogEvent{ text: string::utf8(b"found to insert at index"), num: i});
                 break
             };
             i = i + 1;
         };
     } else {
         indexToInsert = 0;
+        event::emit(LogEvent{ text: string::utf8(b"found to insert at index 0 (empty)"), num: 0});
     };
 
-    if (indexToInsert < network.routers.length() || network.routers.length() == 0) {
-        network.routers.insert( RouterInfo{
-            xchgAddress: routerAddress,
-            ipAddr: router.ipAddr,
-            currentStake: router.totalStakeAmount,
-        }, indexToInsert);
+    // Check if index is not out of range
+    // place to the last position
+    if (indexToInsert > network.routers.length()) {
+        indexToInsert = network.routers.length();
+    };
 
-        if (network.routers.length() > 10) {
-            network.routers.pop_back();
-        };
+    // Insert
+    network.routers.insert( RouterInfo{
+        xchgAddress: routerAddress,
+        ipAddr: router.ipAddr,
+        currentStake: router.totalStakeAmount,
+    }, indexToInsert);
+    event::emit(LogEvent{ text: string::utf8(b"inserted at index"), num: indexToInsert});
+
+    // Remove last if more than 10
+    if (network.routers.length() > 10) {
+        network.routers.pop_back();
+        event::emit(LogEvent{ text: string::utf8(b"pop_back"), num: 0});
     };
 }
 
@@ -856,7 +891,7 @@ fun internal_place_router_to_directors(f: &mut Fund, routerAddress: address, _ct
     let network = &mut f.directors;
     let mut i = 0;
 
-    let mut indexToInsert = network.length();
+    let mut indexToInsert = 0xFFFFFFFF;
 
     // Remove previous record
     while (i < network.length()) {
@@ -883,15 +918,22 @@ fun internal_place_router_to_directors(f: &mut Fund, routerAddress: address, _ct
         indexToInsert = 0;
     };
 
-    if (indexToInsert < network.length()) {
-        network.insert( RouterInfo{
-            xchgAddress: routerAddress,
-            ipAddr: router.ipAddr,
-            currentStake: router.totalStakeAmount,
-        }, indexToInsert);
-        if (network.length() > 10) {
-            network.pop_back();
-        };
+    // Check if index is not out of range
+    // place to the last position
+    if (indexToInsert > network.length()) {
+        indexToInsert = network.length();
+    };
+
+    // Insert
+    network.insert( RouterInfo{
+        xchgAddress: routerAddress,
+        ipAddr: router.ipAddr,
+        currentStake: router.totalStakeAmount,
+    }, indexToInsert);
+
+    // Remove last if more than 10
+    if (network.length() > 10) {
+        network.pop_back();
     };
 }
 

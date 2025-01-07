@@ -98,17 +98,30 @@ export function Profile(
     }
     ///////////////////////////////////////////////////////////////
 
-        ///////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////
     // AddRouterDialog
     const [isAddRouterDialogOpen, setAddRouterDialogOpen] = useState(false);
     const handleOpenAddRouterDialog = () => setAddRouterDialogOpen(true);
     const handleCloseAddRouterDialog = () => setAddRouterDialogOpen(false);
+
+    const [addRouterDialogDataXchgAddr, setAddRouterDialogDataXchgAddr] = useState('');
+    const [addRouterDialogDataSegment, setAddRouterDialogDataSegment] = useState('');
+    const [addRouterDialogDataName, setAddRouterDialogDataName] = useState('');
+    const [addRouterDialogDataIpAddr, setAddRouterDialogDataIpAddr] = useState('');
+
     const handleSubmitAddRouterDialog = (xchgAddr: string, segment: string, name: string, ipAddr: string) => {
-        setErrorText(xchgAddr + "Segment:" + segment + " Name: " + name + ", IP: " + ipAddr);
-        //updateFavoriteXchgAddress(xchgAddr, name, group, description);
-        createRouter(xchgAddr, segment, name, ipAddr);
+        if (addRouterDialogDataXchgAddr == '') {
+            setErrorText(xchgAddr + "Segment:" + segment + " Name: " + name + ", IP: " + ipAddr);
+            createRouter(xchgAddr, segment, name, ipAddr);
+        } else {
+            modifyRouter(xchgAddr, segment, name, ipAddr);
+        }
     }
-    const addRouterDialog = () => {
+    const addRouterDialog = (xchgAddr: string, segment: string, name: string, ipAddr: string) => {
+        setAddRouterDialogDataXchgAddr(xchgAddr);
+        setAddRouterDialogDataSegment(segment);
+        setAddRouterDialogDataName(name);
+        setAddRouterDialogDataIpAddr(ipAddr);
         handleOpenAddRouterDialog();
     }
     ///////////////////////////////////////////////////////////////
@@ -767,6 +780,7 @@ export function Profile(
     }
 
 
+
     const createRouter = async (xchgAddr: string, segment: string, name: string, ipAddr: string) => {
         if (!currentAccount) {
             return;
@@ -809,6 +823,98 @@ export function Profile(
                 },
                 onError: (error) => {
                     alert("Error: " + error);
+                }
+
+            },
+        );
+    }
+
+    const modifyRouter = async (xchgAddr: string, segment: string, name: string, ipAddr: string) => {
+        if (!currentAccount) {
+            return;
+        }
+
+        console.log("Modify Router: ", xchgAddr, segment, name, ipAddr);
+
+        const tx = new Transaction();
+
+        let segmentNum = parseInt(segment);
+        if (isNaN(segmentNum)) {
+            setErrorText("Invalid segment");
+            return;
+        }
+
+        tx.moveCall({
+            arguments: [
+                tx.object(TESTNET_COUNTER_FUND_ID),
+                tx.pure.u32(segmentNum),
+                tx.pure.string(name),
+                tx.pure.string(ipAddr),
+                tx.pure.address(xchgAddr),
+            ],
+            target: `${counterPackageId}::fund::modifyRouter`,
+        });
+
+        signAndExecute(
+            {
+                transaction: tx,
+            },
+            {
+                onSuccess: async ({ digest }) => {
+                    const { effects } = await suiClient.waitForTransaction({
+                        digest: digest,
+                        options: {
+                            showEffects: true,
+                            showRawEffects: true,
+                        },
+                    });
+
+                    console.log("Effects: ", effects);
+                    reloadProfile();
+                    setErrorText("OK");
+                },
+                onError: (error) => {
+                    setErrorText("Error: " + error);
+                }
+
+            },
+        );
+    }
+
+
+    const removeRouter = async (xchgAddr: string) => {
+        if (!currentAccount) {
+            return;
+        }
+
+        const tx = new Transaction();
+        tx.moveCall({
+            arguments: [
+                tx.object(TESTNET_COUNTER_FUND_ID),
+                tx.pure.address(xchgAddr),
+            ],
+            target: `${counterPackageId}::fund::removeRouter`,
+        });
+
+        signAndExecute(
+            {
+                transaction: tx,
+            },
+            {
+                onSuccess: async ({ digest }) => {
+                    const { effects } = await suiClient.waitForTransaction({
+                        digest: digest,
+                        options: {
+                            showEffects: true,
+                            showRawEffects: true,
+                        },
+                    });
+                    console.log("Effects: ", effects);
+                    reloadProfile();
+                    setErrorText("OK");
+                },
+                onError: (error) => {
+                    setErrorText("Error: " + error);
                 }
 
             },
@@ -1171,7 +1277,7 @@ export function Profile(
                                     <Flex>
                                         <Container
                                             style={styles.addToFavButton}
-                                            onClick={() => addRouterDialog()}>
+                                            onClick={() => addRouterDialog('', '', '', '')}>
                                             ADD
                                         </Container>
                                     </Flex>
@@ -1214,6 +1320,13 @@ export function Profile(
 
                                                 > REMOVE STAKE
                                                 </Container>
+                                                <Container
+                                                    flexGrow='0'
+                                                    style={styles.lightButton}
+                                                    onClick={() => removeRouter(item.xchgAddr)}
+
+                                                > REMOVE
+                                                </Container>
                                             </Flex>
                                         </Flex>
                                     ))}
@@ -1241,6 +1354,10 @@ export function Profile(
                         />
 
                         <AddRouterDialog
+                            xchgAddr={addRouterDialogDataXchgAddr}
+                            segment={addRouterDialogDataSegment}
+                            name={addRouterDialogDataName}
+                            ipAddr={addRouterDialogDataIpAddr}
                             isOpen={isAddRouterDialogOpen}
                             onClose={handleCloseAddRouterDialog}
                             onSubmit={handleSubmitAddRouterDialog}
