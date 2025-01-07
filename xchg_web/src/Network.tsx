@@ -1,128 +1,17 @@
 import {
-    useSignAndExecuteTransaction,
     useSuiClient,
 } from "@mysten/dapp-kit";
-import type { SuiObjectData, GetDynamicFieldObjectParams } from "@mysten/sui/client";
-import { Transaction } from "@mysten/sui/transactions";
-import { Button, Flex, Heading } from "@radix-ui/themes";
-import { useNetworkVariable } from "./networkConfig";
-import { useEffect, useState } from "react";
-import ClipLoader from "react-spinners/ClipLoader";
-import { shortAddress } from "./utils";
-import { decryptMessage, encryptMessage } from "./aes";
+import { Button, Flex } from "@radix-ui/themes";
+import { getObjectFields } from "./utils";
 import { TESTNET_COUNTER_FUND_ID } from "./constants";
-import { useCurrentAccount } from "@mysten/dapp-kit";
-import { makeError } from "./error";
-import type { WalletAccount } from '@mysten/wallet-standard';
+import { useState } from "react";
 
 export function Network() {
-
-    const currentAccount = useCurrentAccount();
-
-    const counterPackageId = useNetworkVariable("counterPackageId");
     const suiClient = useSuiClient();
-    const { mutate: signAndExecute } = useSignAndExecuteTransaction();
-    const [isWaitingForTransaction, setIsWaitingForTransaction] = useState(false);
-
-    const [textToSet, setTextToSet] = useState("");
 
     const [networkInfo, setNetworkInfo] = useState({});
 
-    const [waitingForTxn, setWaitingForTxn] = useState("");
-
-    const GB_TYPE = '0x79e972d497be7e3e4571693f428dcb1d49bd576c99f32dbe992c35284a83a7bf::tb::TB';
-    const prepareCoin = async (account: WalletAccount, tx: Transaction, coinType: string, amount: bigint): (Promise<TransactionResult | DError>) => {
-        if (!account) {
-            return makeError("No account");
-        }
-
-        const coinTypeParts = coinType.split('::');
-        if (coinTypeParts.length !== 3) {
-            return makeError("Invalid coin type");
-        }
-
-        const coinSymbol = coinType.split('::')[2];
-
-        const { data: coins } = await suiClient.getCoins({
-            owner: account.address,
-            coinType: coinType,
-        });
-
-        if (coins.length === 0) {
-            return makeError("No " + coinSymbol + " found");
-        }
-
-        let totalBalance = 0n;
-        for (let i = 0; i < coins.length; i++) {
-            let balanceAsBitInt = BigInt(coins[i].balance);
-            totalBalance += balanceAsBitInt;
-        }
-
-        if (BigInt(totalBalance) < amount) {
-            console.log('Not enough balance');
-            return makeError("Not enough " + coinSymbol + " balance");
-        }
-
-        console.log('Coins found', coins);
-
-        // Try to find a coin with enough amount
-        let coinWithEnoughAmount = coins.find((coin) => BigInt(coin.balance) >= BigInt(amount));
-        if (coinWithEnoughAmount) {
-            const coin = tx.splitCoins(coinWithEnoughAmount.coinObjectId, [amount]);
-            return coin;
-        }
-
-        // Merge all coins into the first coin
-        let coinsIDs = coins.map((coin) => coin.coinObjectId);
-        let coinsIDsFromSecondItem = coinsIDs.slice(1);
-        tx.mergeCoins(coins[0].coinObjectId, coinsIDsFromSecondItem);
-        const coin = tx.splitCoins(coins[0].coinObjectId, [amount]);
-        return coin;
-    }
-
-    const delareService = async () => {
-        if (!currentAccount) {
-            return;
-        }
-
-        const tx = new Transaction();
-        tx.moveCall({
-            arguments: [
-                tx.object(TESTNET_COUNTER_FUND_ID),
-                tx.pure.u8(3),
-                //tx.pure.vector('u8', [192, 168, 0, 17]),
-                tx.pure.string("131231231"),
-                tx.object('0x0000000000000000000000000000000000000000000000000000000000000006'),
-            ],
-            target: `${counterPackageId}::fund::delareService`,
-        });
-
-        signAndExecute(
-            {
-                transaction: tx,
-            },
-            {
-                onSuccess: async ({ digest }) => {
-                    const { effects } = await suiClient.waitForTransaction({
-                        digest: digest,
-                        options: {
-                            showEffects: true,
-                            showRawEffects: true,
-                        },
-                    });
-                    console.log("Effects: ", effects);
-                    alert("OK");
-                },
-                onError: (error) => {
-                    alert("Error: " + error);
-                }
-
-            },
-        );
-    }
-
-    const loadNetwork = async (networkIndex: number) => {
-        console.log("Loading router account");
+    const getNetworkTableId = async () => {
         let fundId = TESTNET_COUNTER_FUND_ID;
         const resultGetFund = await suiClient.getObject({
             id: fundId,
@@ -131,70 +20,63 @@ export function Network() {
                 showOwner: true,
             },
         });
-        console.log("Fund Object: ", resultGetFund);
-        let networkTable = resultGetFund.data?.content?.fields?.network.fields.id.id;
-        console.log("networkTable Table: ", networkTable);
+        let fields = getObjectFields(resultGetFund.data);
+        return fields.network.fields.id.id;
+    }
 
-        let localAddress = currentAccount?.address;
-        console.log("Local Address: ", localAddress);
+    const loadNetwork = async () => {
+        console.log("Loading network");
+        let networkTableId = await getNetworkTableId();
 
-        let id = networkTable;
         const network = await suiClient.getDynamicFieldObject(
             {
-                parentId: id,
+                parentId: networkTableId,
                 name: {
-                    type: "u8",
-                    value: networkIndex,
+                    type: "u32",
+                    value: 1,
                 }
             }
         );
         console.log("Network: ", network);
 
-        let networkInfo = [];
+        let networkInfo = {};
         networkInfo.routers = network.data?.content.fields.value.fields.routers;
 
         console.log("Parsed: ", networkInfo);
         setNetworkInfo(networkInfo);
     }
 
-
-    let isDisabled = false;
-    if (isWaitingForTransaction) {
-        isDisabled = true;
-    }
-
     return (
         <>
-            <hr style={{ marginTop: '20px' }} />
             <h1>NETWORK</h1>
-
             <Flex direction="column" gap="2">
                 <Flex direction="column" gap="2">
                     <Flex direction="row">
                         <Button
                             style={{ marginRight: '12px' }}
-                            onClick={() => delareService()}
-                            disabled={waitingForTxn !== ""}
-                        > delareService
+                            onClick={() => loadNetwork()}
+
+                        > LOAD NETWORK
                         </Button>
-                        <Button
-                            style={{ marginRight: '12px' }}
-                            onClick={() => loadNetwork(3)}
-                            disabled={waitingForTxn !== ""}
-                        > GET TEST
-                        </Button>
+                    </Flex>
+                    <Flex>
+                    
                     </Flex>
                     <Flex direction='column'>
-                        {networkInfo?.routers?.map((item, index) => (
-                            <Flex key={index}>
-                                ID: {item.fields.ipAddr}
-                                <br />
-                            </Flex>
-                        ))}
-
-                        ChequeIds:{ }
+                        {
+                            networkInfo.routers &&
+                            networkInfo.routers?.map((router, index) => {
+                                return (
+                                    <Flex key={index} direction='column' style={{borderTop: '1px solid #777'}}>
+                                        <Flex>Index: {index}</Flex>
+                                        <Flex>XCHG Addr: {router.fields.xchgAddress}</Flex>
+                                        <Flex>Stake: {router.fields.currentStake}</Flex>
+                                        <Flex>IP Addr: {router.fields.ipAddr}</Flex>
+                                    </Flex>
+                                );
+                            })
+                        }
                     </Flex>
-
                 </Flex>
             </Flex>
         </>

@@ -792,6 +792,7 @@ fun internal_place_router_to_network(f: &mut Fund, routerAddress: address, _ctx:
         let routerInfo = network.routers.borrow(i);
         if (routerInfo.xchgAddress == routerAddress) {
             network.routers.remove(i);
+            event::emit(LogEvent{ text: string::utf8(b"place 1"), num: i});
             break
         };
         i = i + 1;
@@ -812,12 +813,13 @@ fun internal_place_router_to_network(f: &mut Fund, routerAddress: address, _ctx:
         indexToInsert = 0;
     };
 
-    if (indexToInsert < network.routers.length()) {
+    if (indexToInsert < network.routers.length() || network.routers.length() == 0) {
         network.routers.insert( RouterInfo{
             xchgAddress: routerAddress,
             ipAddr: router.ipAddr,
             currentStake: router.totalStakeAmount,
         }, indexToInsert);
+
         if (network.routers.length() > 10) {
             network.routers.pop_back();
         };

@@ -1,5 +1,5 @@
 export const DEVNET_COUNTER_PACKAGE_ID = "0xTODO";
-export const TESTNET_COUNTER_PACKAGE_ID = "0x3bf48e3d88ffee13b73d411e22b2cdea6f03b620b752909d6a12a42b1ad8296c";
+export const TESTNET_COUNTER_PACKAGE_ID = "0xa643cf7a8c35ef6449f09a810448bb64611a45da5843efdae5de4213d830c46d";
 export const MAINNET_COUNTER_PACKAGE_ID = "asdasd";
 export const NETWORK_CONFIG = {
     devnet: {
@@ -13,5 +13,5 @@ export const NETWORK_CONFIG = {
     },
 };
 
-export const TESTNET_COUNTER_FUND_ID = "0xca3cba02aadbb4da8a49fe3208ffa5f9c72ca491bb300358328a2e52d6730895";
+export const TESTNET_COUNTER_FUND_ID = "0x86bf3ecb8c28571b439d20fd5be6645b247412238cf839a493c0b4d7280713ec";
 export const GB_TYPE = '0x7b2e43cbf634352804584979b5579d4981d9b519ad862c4a220f6ee63e1941b1::gb::GB';
