@@ -12,10 +12,16 @@ func Exec() {
 	params.PackageId = "0xbe66e3956632c8b8cb90211ecb329b9bb03afef9ba5d72472a7c240d3afe19fd"
 	params.ModuleName = "example"
 	params.FunctionName = "ex1"
+	params.Arguments = []interface{}{}
 
 	res, err := cl.ExecMoveCall(params)
 	if err != nil {
 		fmt.Println("ERROR:", err)
+		return
+	}
+
+	if res == nil {
+		fmt.Println("ERROR: nil result")
 		return
 	}
 

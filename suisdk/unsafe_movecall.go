@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-func (c *Client) UnsafeMoveCall(gasObj string, gasBudget string, packageId string, moduleName string, functionName string) (*TransactionBlockBytes, error) {
+func (c *Client) UnsafeMoveCall(gasObj string, gasBudget string, packageId string, moduleName string, functionName string, arguments []interface{}) (*TransactionBlockBytes, error) {
 	requestBody := RPCRequest{
 		JSONRPC: "2.0",
 		ID:      1,
@@ -16,7 +16,7 @@ func (c *Client) UnsafeMoveCall(gasObj string, gasBudget string, packageId strin
 			moduleName,
 			functionName,
 			[]interface{}{},
-			[]interface{}{},
+			arguments,
 			&gasObj,
 			gasBudget,
 		},

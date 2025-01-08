@@ -59,9 +59,10 @@ func (c *Client) GetGasCoinObjId(amount uint64) string {
 }
 
 type MoveCallParameters struct {
-	PackageId    string `json:"package_id"`
-	ModuleName   string `json:"module_name"`
-	FunctionName string `json:"function_name"`
+	PackageId    string        `json:"package_id"`
+	ModuleName   string        `json:"module_name"`
+	FunctionName string        `json:"function_name"`
+	Arguments    []interface{} `json:"arguments"`
 }
 
 func (c *Client) ExecMoveCall(params MoveCallParameters) (*TransactionExecutionResult, error) {
@@ -70,7 +71,7 @@ func (c *Client) ExecMoveCall(params MoveCallParameters) (*TransactionExecutionR
 	gasCoinObjId := c.GetGasCoinObjId(gasBudget)
 
 	// Prepare TxBytes
-	txBytes, err := c.UnsafeMoveCall(gasCoinObjId, fmt.Sprint(gasBudget), params.PackageId, params.ModuleName, params.FunctionName)
+	txBytes, err := c.UnsafeMoveCall(gasCoinObjId, fmt.Sprint(gasBudget), params.PackageId, params.ModuleName, params.FunctionName, params.Arguments)
 	if err != nil {
 		return nil, err
 	}
