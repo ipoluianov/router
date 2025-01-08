@@ -2,7 +2,11 @@ module github.com/ipoluianov/router
 
 go 1.21.3
 
-require github.com/block-vision/sui-go-sdk v1.0.6
+require (
+	github.com/block-vision/sui-go-sdk v1.0.6
+	github.com/tyler-smith/go-bip39 v1.1.0
+	golang.org/x/crypto v0.23.0
+)
 
 require (
 	github.com/go-playground/locales v0.14.1 // indirect
@@ -14,8 +18,6 @@ require (
 	github.com/tidwall/gjson v1.14.4 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
-	github.com/tyler-smith/go-bip39 v1.1.0 // indirect
-	golang.org/x/crypto v0.23.0 // indirect
 	golang.org/x/sys v0.20.0 // indirect
 	golang.org/x/text v0.15.0 // indirect
 	golang.org/x/time v0.5.0 // indirect

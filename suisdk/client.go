@@ -8,12 +8,14 @@ import (
 )
 
 type Client struct {
-	rpcURL string
+	rpcURL  string
+	account *Account
 }
 
 func NewClient(rpcURL string) *Client {
 	var c Client
 	c.rpcURL = rpcURL
+	c.account, _ = NewAccountFromMnemonic("reveal resist nothing diary romance toe immense then spirit nut problem hawk")
 	return &c
 }
 

@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/ipoluianov/router/suisdk"
 	"github.com/ipoluianov/router/xchg"
 )
 
@@ -21,6 +22,9 @@ func generateKeys() {
 }
 
 func main() {
+	suisdk.Exec()
+	return
+
 	r, err := xchg.GetRouterObject("0x5ded23a41eb84ec1f95b27d14222155f145a45e76a6377ae9cfcf754a4da9956")
 	if err != nil {
 		fmt.Println(err)
