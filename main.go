@@ -22,7 +22,7 @@ func generateKeys() {
 }
 
 func main() {
-	suisdk.Exec()
+	suisdk.BCS()
 	return
 
 	r, err := xchg.GetRouterObject("0x5ded23a41eb84ec1f95b27d14222155f145a45e76a6377ae9cfcf754a4da9956")
