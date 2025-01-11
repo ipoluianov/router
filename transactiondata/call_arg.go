@@ -1,7 +1,5 @@
 package transactiondata
 
-import "errors"
-
 type CallArgType int
 
 const (
@@ -10,43 +8,51 @@ const (
 )
 
 type CallArg struct {
+	Type CallArgType
+
 	Pure   []byte
 	Object *ObjectArg
 }
 
 func (c *CallArg) Parse(data []byte, offset int) (int, error) {
-	if len(data) < offset+1 {
-		return 0, errors.New("not enough data")
-	}
-	argType := CallArgType(data[offset])
-	if argType != CallArgTypePure && argType != CallArgTypeObject {
-		return 0, errors.New("unknown arg type")
-	}
+	var err error
 
-	offset++
+	// Read type of the argument
+	var argType int
+	argType, offset, err = ParseULEB128(data, offset)
+	if err != nil {
+		return 0, err
+	}
+	if argType < 0 || argType > 1 {
+		return 0, ErrInvalidEnumValue
+	}
+	c.Type = CallArgType(argType)
 
-	switch argType {
+	// Make and parse the argument
+	switch c.Type {
 	case CallArgTypePure:
-		if len(data) < offset+1 {
-			return 0, errors.New("not enough data")
+		// Read the length of the pure data
+		var pureLen int
+		pureLen, offset, err = ParseULEB128(data, offset)
+		if err != nil {
+			return 0, err
 		}
-		pureLen := int(data[offset])
-		offset++
 		if len(data) < offset+pureLen {
-			return 0, errors.New("not enough data")
+			return 0, ErrNotEnoughData
 		}
+		// Copy the pure data
 		c.Pure = make([]byte, pureLen)
 		copy(c.Pure, data[offset:offset+pureLen])
 		offset += pureLen
 	case CallArgTypeObject:
+		// Parse the object
 		c.Object = &ObjectArg{}
-		n, err := c.Object.Parse(data, offset)
+		offset, err = c.Object.Parse(data, offset)
 		if err != nil {
 			return 0, err
 		}
-		offset += n
 	default:
-		return 0, errors.New("unknown arg type")
+		return 0, ErrInvalidEnumValue
 	}
 	return offset, nil
 }

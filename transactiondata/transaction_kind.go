@@ -31,13 +31,20 @@ const (
 )
 
 func (c *TransactionKind) Parse(data []byte, offset int) (int, error) {
-	kind := data[offset]
-	if kind < 0 && kind > 8 {
-		return 0, errors.New("invalid transaction kind")
-	}
-	offset++
-	c.Type = TransactionKindType(kind)
+	var kind int
 	var err error
+
+	// Parse the transaction kind
+	kind, offset, err = ParseULEB128(data, offset)
+	if err != nil {
+		return 0, err
+	}
+	if kind < 0 || kind > 8 {
+		return 0, ErrInvalidEnumValue
+	}
+	c.Type = TransactionKindType(kind)
+
+	// Parse the transaction data
 	switch c.Type {
 	case ProgrammableTransactionType:
 		c.ProgrammableTransaction = &ProgrammableTransaction{}
@@ -96,5 +103,5 @@ func (c *TransactionKind) Parse(data []byte, offset int) (int, error) {
 		}
 	}
 
-	return 0, nil
+	return offset, nil
 }

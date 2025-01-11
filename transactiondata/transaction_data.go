@@ -1,10 +1,16 @@
 package transactiondata
 
-import "errors"
+type TransactionDataVersion int
+
+const (
+	TransactionDataVersionV1 TransactionDataVersion = 0
+	TransactionDataVersionV2 TransactionDataVersion = 1
+)
 
 type TransactionData struct {
-	V1 *TransactionDataV1
-	V2 *TransactionDataV2
+	Version TransactionDataVersion
+	V1      *TransactionDataV1
+	V2      *TransactionDataV2
 }
 
 func NewTransactionData() *TransactionData {
@@ -14,30 +20,33 @@ func NewTransactionData() *TransactionData {
 
 func NewTransactionDataV1() *TransactionData {
 	var c TransactionData
+	c.Version = TransactionDataVersionV1
 	c.V1 = &TransactionDataV1{}
 	return &c
 }
 
 func NewTransactionDataV2() *TransactionData {
 	var c TransactionData
+	c.Version = TransactionDataVersionV2
 	c.V2 = &TransactionDataV2{}
 	return &c
 }
 
 func (c *TransactionData) Parse(data []byte, offset int) (int, error) {
-	if len(data) == 0 {
-		return 0, errors.New("empty data")
-	}
-	if data[0] == 0 {
-		c.V1 = &TransactionDataV1{}
-		c.V1.Parse(data, offset)
-	}
-	if data[0] == 1 {
-		c.V2 = &TransactionDataV2{}
+	if len(data) < offset+1 {
+		return 0, ErrNotEnoughData
 	}
 	if data[0] != 0 && data[0] != 1 {
-		return 0, errors.New("unknown version")
+		return 0, ErrInvalidEnumValue
 	}
-	offset += 1
-	return offset, nil
+	c.Version = TransactionDataVersion(data[0])
+	switch c.Version {
+	case TransactionDataVersionV1:
+		c.V1 = &TransactionDataV1{}
+		return c.V1.Parse(data, offset+1)
+	case TransactionDataVersionV2:
+		c.V2 = &TransactionDataV2{}
+		return c.V2.Parse(data, offset+1)
+	}
+	return 0, ErrInvalidEnumValue
 }

@@ -1,7 +1,5 @@
 package transactiondata
 
-import "errors"
-
 type ObjectArgType int
 
 const (
@@ -19,37 +17,43 @@ type ObjectArg struct {
 }
 
 func (c *ObjectArg) Parse(data []byte, offset int) (int, error) {
-	if len(data) < offset+1 {
-		return 0, errors.New("not enough data")
+	var err error
+
+	// Parse the type of the object argument
+	var argType int
+	argType, offset, err = ParseULEB128(data, offset)
+	if err != nil {
+		return 0, err
 	}
-	argType := ObjectArgType(data[offset])
-	offset++
 	if argType < 0 || argType > 2 {
-		return 0, errors.New("invalid arg type")
+		return 0, ErrInvalidEnumValue
 	}
-	c.Type = argType
-	switch argType {
+	c.Type = ObjectArgType(argType)
+
+	switch c.Type {
 	case ObjectArgTypeImmOrOwnedObject:
+		// Parse the immediate or owned object
 		c.ImmOrOwnedObject = &ObjectRef{}
-		n, err := c.ImmOrOwnedObject.Parse(data, offset)
+		offset, err = c.ImmOrOwnedObject.Parse(data, offset)
 		if err != nil {
 			return 0, err
 		}
-		offset += n
 	case ObjectArgTypeSharedObject:
+		// Parse the shared object
 		c.SharedObject = &SharedObject{}
-		n, err := c.SharedObject.Parse(data, offset)
+		offset, err = c.SharedObject.Parse(data, offset)
 		if err != nil {
 			return 0, err
 		}
-		offset += n
 	case ObjectArgTypeReceiving:
+		// Parse the receiving object
 		c.Receiving = &ObjectRef{}
-		n, err := c.Receiving.Parse(data, offset)
+		offset, err = c.Receiving.Parse(data, offset)
 		if err != nil {
 			return 0, err
 		}
-		offset += n
+	default:
+		return 0, ErrInvalidEnumValue
 	}
 
 	return offset, nil

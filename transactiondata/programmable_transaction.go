@@ -1,42 +1,41 @@
 package transactiondata
 
-import "errors"
-
 type ProgrammableTransaction struct {
 	Inputs   []*CallArg
 	Commands []*Command
 }
 
 func (c *ProgrammableTransaction) Parse(data []byte, offset int) (int, error) {
-	if len(data) < offset+1 {
-		return 0, errors.New("not enough data")
+	var numInputs int
+	var numCommands int
+	var err error
+
+	numInputs, offset, err = ParseULEB128(data, offset)
+	if err != nil {
+		return 0, err
 	}
-	numInputs := int(data[offset])
-	offset++
+
 	for i := 0; i < numInputs; i++ {
 		arg := &CallArg{}
-		n, err := arg.Parse(data, offset)
+		offset, err = arg.Parse(data, offset)
 		if err != nil {
 			return 0, err
 		}
-		offset += n
 		c.Inputs = append(c.Inputs, arg)
 	}
 
-	if len(data) < offset+1 {
-		return 0, errors.New("not enough data")
+	numCommands, offset, err = ParseULEB128(data, offset)
+	if err != nil {
+		return 0, err
 	}
 
-	numCommands := int(data[offset])
-	offset++
 	for i := 0; i < numCommands; i++ {
 		cmd := &Command{}
-		n, err := cmd.Parse(data, offset)
+		offset, err = cmd.Parse(data, offset)
 		if err != nil {
 			return 0, err
 		}
-		offset += n
 		c.Commands = append(c.Commands, cmd)
 	}
-	return 0, errors.New("not implemented")
+	return offset, nil
 }

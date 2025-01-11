@@ -42,7 +42,7 @@ func BCS() {
 	_, err = trData.Parse(bs, 0)
 
 	if err != nil {
-		fmt.Println("ERROR:", err)
+		fmt.Println("ERROR:", err, trData)
 		return
 	}
 
