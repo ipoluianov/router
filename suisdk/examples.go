@@ -60,7 +60,8 @@ func ExampleGetTransactionBlock() {
 	cl := NewClient(MAINNET_URL)
 	var showParams TransactionBlockResponseOptions
 	showParams.ShowRawInput = true
-	b, err := cl.GetTransactionBlock("B91XKEfoLp8edGuMawLMHcaFY5HBGE8u6bFFkhz938RE", showParams)
+	dig := "B91XKEfoLp8edGuMawLMHcaFY5HBGE8u6bFFkhz938RE"
+	b, err := cl.GetTransactionBlock(dig, showParams)
 	if err != nil {
 		fmt.Println("ERROR:", err)
 		return
@@ -91,6 +92,11 @@ func ExampleGetTransactionBlock() {
 
 	jsonBS, _ := json.MarshalIndent(block, "", "  ")
 	fmt.Println(string(jsonBS))
+
+	fmt.Println("TRANSACTION" + dig)
+	fmt.Println("SENDER:", block.TransactionDataWithIntent.Data.V1.Sender)
+	fmt.Println("GASDATA:", block.TransactionDataWithIntent.Data.V1.GasData)
+	fmt.Println("KIND:", block.TransactionDataWithIntent.Data.V1.Kind)
 
 	// 01
 	// 000000

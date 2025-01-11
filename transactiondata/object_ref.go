@@ -10,6 +10,10 @@ type ObjectRef struct {
 	ObjectDigest   *ObjectDigest
 }
 
+func (c *ObjectRef) String() string {
+	return "ObjectRef { ObjectID: " + c.ObjectID.String() + ", SequenceNumber: " + c.SequenceNumber.String() + ", ObjectDigest: " + c.ObjectDigest.String() + " }"
+}
+
 func (c *ObjectRef) Parse(data []byte, offset int) (int, error) {
 	var err error
 

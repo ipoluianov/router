@@ -17,3 +17,7 @@ func (c *SuiAddress) Parse(data []byte, offset int) (int, error) {
 	fmt.Println("SuiAddress.Parse() called", hex.EncodeToString(c[:]))
 	return offset, nil
 }
+
+func (c *SuiAddress) String() string {
+	return "0x" + hex.EncodeToString(c[:])
+}

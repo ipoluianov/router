@@ -2,6 +2,7 @@ package transactiondata
 
 import (
 	"encoding/binary"
+	"fmt"
 )
 
 type GasData struct {
@@ -9,6 +10,18 @@ type GasData struct {
 	Owner   SuiAddress
 	Price   uint64
 	Budget  uint64
+}
+
+func (c *GasData) String() string {
+	result := "GasData { Payment: ["
+	for i, ref := range c.Payment {
+		result += ref.String()
+		if i < len(c.Payment)-1 {
+			result += ", "
+		}
+	}
+	result += "], Owner: " + c.Owner.String() + ", Price: " + fmt.Sprint(c.Price) + ", Budget: " + fmt.Sprint(c.Budget) + " }"
+	return result
 }
 
 func (c *GasData) Parse(data []byte, offset int) (int, error) {

@@ -2,9 +2,14 @@ package transactiondata
 
 import (
 	"encoding/binary"
+	"fmt"
 )
 
 type SequenceNumber uint64
+
+func (c SequenceNumber) String() string {
+	return fmt.Sprint(uint64(c))
+}
 
 type SharedObject struct {
 	Id                   ObjectID

@@ -1,7 +1,13 @@
 package transactiondata
 
+import "encoding/hex"
+
 type ObjectDigest struct {
 	Digest []byte
+}
+
+func (c *ObjectDigest) String() string {
+	return "ObjectDigest { Digest: " + hex.EncodeToString(c.Digest) + " }"
 }
 
 func (c *ObjectDigest) Parse(data []byte, offset int) (int, error) {
