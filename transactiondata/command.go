@@ -24,6 +24,27 @@ type Command struct {
 	Upgrade         *Upgrade
 }
 
+func (c *Command) String() string {
+	fundName := ""
+	switch c.Type {
+	case CommandTypeMoveCall:
+		fundName = "MoveCall"
+	case CommandTypeTransferObjects:
+		fundName = "TransferObjects"
+	case CommandTypeSplitCoins:
+		fundName = "SplitCoins"
+	case CommandTypeMergeCoins:
+		fundName = "MergeCoins"
+	case CommandTypePublish:
+		fundName = "Publish"
+	case CommandTypeMakeMoveVec:
+		fundName = "MakeMoveVec"
+	case CommandTypeUpgrade:
+		fundName = "Upgrade"
+	}
+	return fundName
+}
+
 func (c *Command) Parse(data []byte, offset int) (int, error) {
 	var kind int
 	var err error

@@ -60,7 +60,7 @@ func ExampleGetTransactionBlock() {
 	cl := NewClient(MAINNET_URL)
 	var showParams TransactionBlockResponseOptions
 	showParams.ShowRawInput = true
-	dig := "B91XKEfoLp8edGuMawLMHcaFY5HBGE8u6bFFkhz938RE"
+	dig := "CWYj4F1vW34BwYBVAkFJXKRyoBHhQhenY89g6GvaKjSu"
 	b, err := cl.GetTransactionBlock(dig, showParams)
 	if err != nil {
 		fmt.Println("ERROR:", err)
@@ -96,7 +96,15 @@ func ExampleGetTransactionBlock() {
 	fmt.Println("TRANSACTION" + dig)
 	fmt.Println("SENDER:", block.TransactionDataWithIntent.Data.V1.Sender)
 	fmt.Println("GASDATA:", block.TransactionDataWithIntent.Data.V1.GasData)
-	fmt.Println("KIND:", block.TransactionDataWithIntent.Data.V1.Kind)
+	//fmt.Println("KIND:", block.TransactionDataWithIntent.Data.V1.Kind)
+	if block.TransactionDataWithIntent.Data.V1.Kind.ProgrammableTransaction == nil {
+		fmt.Println("ERROR: ProgrammableTransaction is nil")
+		return
+	}
+	fmt.Println("COMMANDS:")
+	for _, c := range block.TransactionDataWithIntent.Data.V1.Kind.ProgrammableTransaction.Commands {
+		fmt.Println("  ", c)
+	}
 
 	// 01
 	// 000000
