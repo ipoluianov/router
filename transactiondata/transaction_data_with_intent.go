@@ -6,7 +6,6 @@ type TransactionDataWithIntent struct {
 }
 
 func (c *TransactionDataWithIntent) Parse(data []byte, offset int) (int, error) {
-	return 0, ErrNotImplemented
 	c.Intent = &Intent{}
 	offset, err := c.Intent.Parse(data, offset)
 	if err != nil {
