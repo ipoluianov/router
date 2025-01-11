@@ -36,10 +36,10 @@ func (c *TransactionData) Parse(data []byte, offset int) (int, error) {
 	if len(data) < offset+1 {
 		return 0, ErrNotEnoughData
 	}
-	if data[0] != 0 && data[0] != 1 {
+	if data[offset] != 0 && data[offset] != 1 {
 		return 0, ErrInvalidEnumValue
 	}
-	c.Version = TransactionDataVersion(data[0])
+	c.Version = TransactionDataVersion(data[offset])
 	switch c.Version {
 	case TransactionDataVersionV1:
 		c.V1 = &TransactionDataV1{}
