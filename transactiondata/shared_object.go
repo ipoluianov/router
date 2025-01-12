@@ -17,6 +17,26 @@ type SharedObject struct {
 	Mutable              bool
 }
 
+func (c *SharedObject) ToBytes() []byte {
+	var data []byte
+
+	// Serialize ObjectID
+	data = append(data, c.Id[:]...)
+
+	// Serialize InitialSharedVersion
+	data = append(data, make([]byte, 8)...)
+	binary.LittleEndian.PutUint64(data[len(data)-8:], uint64(c.InitialSharedVersion))
+
+	// Serialize Mutable
+	if c.Mutable {
+		data = append(data, 1)
+	} else {
+		data = append(data, 0)
+	}
+
+	return data
+}
+
 func (c *SharedObject) Parse(data []byte, offset int) (int, error) {
 	// Parse ObjectID - fixed size 32 bytes
 	if len(data) < offset+32 {

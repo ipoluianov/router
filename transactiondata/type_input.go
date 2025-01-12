@@ -22,6 +22,21 @@ const (
 	TypeInputU256    TypeInputType = 10
 )
 
+func (c *TypeInput) ToBytes() []byte {
+	var data []byte
+
+	data = append(data, SerializeULEB128(int(c.Type))...)
+
+	if c.Type == TypeInputVector {
+		data = append(data, c.VectorTypeInput.ToBytes()...)
+	}
+	if c.Type == TypeInputStruct {
+		data = append(data, c.StructInput.ToBytes()...)
+	}
+
+	return data
+}
+
 func (c *TypeInput) Parse(data []byte, offset int) (int, error) {
 	tpInput, offset, err := ParseULEB128(data, offset)
 	if err != nil {

@@ -5,6 +5,28 @@ type ProgrammableTransaction struct {
 	Commands []*Command
 }
 
+func (c *ProgrammableTransaction) ToBytes() []byte {
+	var data []byte
+
+	// Serialize the number of inputs
+	data = append(data, SerializeULEB128(len(c.Inputs))...)
+
+	// Serialize the inputs
+	for _, v := range c.Inputs {
+		data = append(data, v.ToBytes()...)
+	}
+
+	// Serialize the number of commands
+	data = append(data, SerializeULEB128(len(c.Commands))...)
+
+	// Serialize the commands
+	for _, v := range c.Commands {
+		data = append(data, v.ToBytes()...)
+	}
+
+	return data
+}
+
 func (c *ProgrammableTransaction) Parse(data []byte, offset int) (int, error) {
 	var numInputs int
 	var numCommands int

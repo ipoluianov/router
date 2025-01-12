@@ -9,12 +9,12 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/ipoluianov/router/transactiondata"
 )
 
-type Address [32]byte
-
-func ParseAddress(addrStr string) Address {
-	var addr Address
+func ParseAddress(addrStr string) transactiondata.SuiAddress {
+	var addr transactiondata.SuiAddress
 	if len(addrStr) != 2+64 {
 		return addr
 	}

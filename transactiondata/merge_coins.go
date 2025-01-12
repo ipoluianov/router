@@ -7,6 +7,23 @@ type MergeCoins struct {
 	Arguments []*Argument
 }
 
+func (c *MergeCoins) ToBytes() []byte {
+	var data []byte
+
+	// Serialize the argument
+	data = append(data, c.Argument.ToBytes()...)
+
+	// Serialize the number of arguments
+	data = append(data, SerializeULEB128(len(c.Arguments))...)
+
+	// Serialize the arguments
+	for _, v := range c.Arguments {
+		data = append(data, v.ToBytes()...)
+	}
+
+	return data
+}
+
 func (c *MergeCoins) Parse(data []byte, offset int) (int, error) {
 	var err error
 	c.Argument = &Argument{}

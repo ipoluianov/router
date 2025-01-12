@@ -10,6 +10,27 @@ type ObjectRef struct {
 	ObjectDigest   *ObjectDigest
 }
 
+func SerializeUint64(i uint64) []byte {
+	data := make([]byte, 8)
+	binary.LittleEndian.PutUint64(data, i)
+	return data
+}
+
+func (c *ObjectRef) ToBytes() []byte {
+	var data []byte
+
+	// Serialize ObjectID
+	data = append(data, c.ObjectID[:]...)
+
+	// Serialize SequenceNumber
+	data = append(data, SerializeUint64(uint64(c.SequenceNumber))...)
+
+	// Serialize ObjectDigest
+	data = append(data, c.ObjectDigest.ToBytes()...)
+
+	return data
+}
+
 func (c *ObjectRef) String() string {
 	return "ObjectRef { ObjectID: " + c.ObjectID.String() + ", SequenceNumber: " + c.SequenceNumber.String() + ", ObjectDigest: " + c.ObjectDigest.String() + " }"
 }

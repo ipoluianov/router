@@ -30,6 +30,39 @@ const (
 	ConsensusCommitPrologueV3Type TransactionKindType = 8
 )
 
+func (c *TransactionKind) ToBytes() []byte {
+	var data []byte
+
+	// Serialize the transaction kind
+	data = append(data, SerializeULEB128(int(c.Type))...)
+
+	// Serialize the transaction data
+	switch c.Type {
+	case ProgrammableTransactionType:
+		data = append(data, c.ProgrammableTransaction.ToBytes()...)
+	case ChangeEpochType:
+		data = append(data, c.ChangeEpoch.ToBytes()...)
+	case GenesisType:
+		data = append(data, c.Genesis.ToBytes()...)
+	case ConsensusCommitPrologueType:
+		data = append(data, c.ConsensusCommitPrologue.ToBytes()...)
+	case AuthenticatorStateUpdateType:
+		data = append(data, c.AuthenticatorStateUpdate.ToBytes()...)
+	case EndOfEpochTransactionType:
+		for _, v := range c.EndOfEpochTransaction {
+			data = append(data, v.ToBytes()...)
+		}
+	case RandomnessStateUpdateType:
+		data = append(data, c.RandomnessStateUpdate.ToBytes()...)
+	case ConsensusCommitPrologueV2Type:
+		data = append(data, c.ConsensusCommitPrologueV2.ToBytes()...)
+	case ConsensusCommitPrologueV3Type:
+		data = append(data, c.ConsensusCommitPrologueV3.ToBytes()...)
+	}
+
+	return data
+}
+
 func (c *TransactionKind) Parse(data []byte, offset int) (int, error) {
 	var kind int
 	var err error

@@ -5,6 +5,23 @@ type SplitCoins struct {
 	Arguments []*Argument
 }
 
+func (c *SplitCoins) ToBytes() []byte {
+	var data []byte
+
+	// Serialize the argument
+	data = append(data, c.Argument.ToBytes()...)
+
+	// Serialize the number of arguments
+	data = append(data, SerializeULEB128(len(c.Arguments))...)
+
+	// Serialize the arguments
+	for _, v := range c.Arguments {
+		data = append(data, v.ToBytes()...)
+	}
+
+	return data
+}
+
 func (c *SplitCoins) Parse(data []byte, offset int) (int, error) {
 	var err error
 	c.Argument = &Argument{}

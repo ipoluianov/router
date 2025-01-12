@@ -16,6 +16,30 @@ type ObjectArg struct {
 	Receiving        *ObjectRef
 }
 
+func (c *ObjectArg) ToBytes() []byte {
+	var data []byte
+
+	// Serialize the type of the object argument
+	data = append(data, SerializeULEB128(int(c.Type))...)
+
+	// Serialize the object argument
+	switch c.Type {
+	case ObjectArgTypeImmOrOwnedObject:
+		// Serialize the immediate or owned object
+		data = append(data, c.ImmOrOwnedObject.ToBytes()...)
+	case ObjectArgTypeSharedObject:
+		// Serialize the shared object
+		data = append(data, c.SharedObject.ToBytes()...)
+	case ObjectArgTypeReceiving:
+		// Serialize the receiving object
+		data = append(data, c.Receiving.ToBytes()...)
+	default:
+		return nil
+	}
+
+	return data
+}
+
 func (c *ObjectArg) Parse(data []byte, offset int) (int, error) {
 	var err error
 

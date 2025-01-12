@@ -25,6 +25,27 @@ type Argument struct {
 	ArgumentNestedResult ArgumentNestedResult
 }
 
+func SerializeUint16(value uint16) []byte {
+	data := make([]byte, 2)
+	binary.LittleEndian.PutUint16(data, value)
+	return data
+}
+
+func (c *Argument) ToBytes() []byte {
+	var data []byte
+	data = append(data, SerializeULEB128(int(c.ArgumentType))...)
+	switch c.ArgumentType {
+	case ArgumentTypeInput:
+		data = append(data, SerializeUint16(uint16(c.ArgumentInput))...)
+	case ArgumentTypeResult:
+		data = append(data, SerializeUint16(uint16(c.ArgumentResult))...)
+	case ArgumentTypeNestedResult:
+		data = append(data, SerializeUint16(c.ArgumentNestedResult.Index1)...)
+		data = append(data, SerializeUint16(c.ArgumentNestedResult.Index2)...)
+	}
+	return data
+}
+
 func (c *Argument) Parse(data []byte, offset int) (int, error) {
 	var err error
 	var arg int

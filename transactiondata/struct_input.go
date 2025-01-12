@@ -7,6 +7,25 @@ type StructInput struct {
 	TypeParams []TypeInput
 }
 
+func (c *StructInput) ToBytes() []byte {
+	var data []byte
+
+	data = append(data, c.Address.ToBytes()...)
+
+	data = append(data, SerializeULEB128(len(c.Module))...)
+	data = append(data, []byte(c.Module)...)
+
+	data = append(data, SerializeULEB128(len(c.Name))...)
+	data = append(data, []byte(c.Name)...)
+
+	data = append(data, SerializeULEB128(len(c.TypeParams))...)
+	for _, v := range c.TypeParams {
+		data = append(data, v.ToBytes()...)
+	}
+
+	return data
+}
+
 func (c *StructInput) Parse(data []byte, offset int) (int, error) {
 	var err error
 	c.Address = AccountAddress{}

@@ -8,6 +8,39 @@ type ProgrammableMoveCall struct {
 	Arguments     []Argument
 }
 
+func (c *ProgrammableMoveCall) ToBytes() []byte {
+	var data []byte
+
+	// Serialize the package
+	data = append(data, c.Package.ToBytes()...)
+
+	// Serialize the module
+	data = append(data, SerializeULEB128(len(c.Module))...)
+	data = append(data, []byte(c.Module)...)
+
+	// Serialize the function
+	data = append(data, SerializeULEB128(len(c.Function))...)
+	data = append(data, []byte(c.Function)...)
+
+	// Serialize the number of type arguments
+	data = append(data, SerializeULEB128(len(c.TypeArguments))...)
+
+	// Serialize the type arguments
+	for _, v := range c.TypeArguments {
+		data = append(data, v.ToBytes()...)
+	}
+
+	// Serialize the number of arguments
+	data = append(data, SerializeULEB128(len(c.Arguments))...)
+
+	// Serialize the arguments
+	for _, v := range c.Arguments {
+		data = append(data, v.ToBytes()...)
+	}
+
+	return data
+}
+
 func (c *ProgrammableMoveCall) Parse(data []byte, offset int) (int, error) {
 	var err error
 	var strLen int

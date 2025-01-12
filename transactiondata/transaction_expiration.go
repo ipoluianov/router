@@ -16,6 +16,22 @@ type TransactionExpiration struct {
 	EpochId uint64
 }
 
+func NewTransactionExpiration() *TransactionExpiration {
+	var c TransactionExpiration
+	c.Kind = TransactionExpirationKindNone
+	c.EpochId = uint64(0)
+	return &c
+}
+
+func (c *TransactionExpiration) ToBytes() []byte {
+	var data []byte
+	data = append(data, SerializeULEB128(int(c.Kind))...)
+	if c.Kind == TransactionExpirationKindEpoch {
+		data = append(data, SerializeUint64(c.EpochId)...)
+	}
+	return data
+}
+
 func (c *TransactionExpiration) Parse(data []byte, offset int) (int, error) {
 	var kind int
 	var err error

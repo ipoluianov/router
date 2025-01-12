@@ -24,6 +24,33 @@ type Command struct {
 	Upgrade         *Upgrade
 }
 
+func (c *Command) ToBytes() []byte {
+	var data []byte
+
+	// Serialize the command kind
+	data = append(data, SerializeULEB128(int(c.Type))...)
+
+	// Serialize the command data
+	switch c.Type {
+	case CommandTypeMoveCall:
+		data = append(data, c.MoveCall.ToBytes()...)
+	case CommandTypeTransferObjects:
+		data = append(data, c.TransferObjects.ToBytes()...)
+	case CommandTypeSplitCoins:
+		data = append(data, c.SplitCoins.ToBytes()...)
+	case CommandTypeMergeCoins:
+		data = append(data, c.MergeCoins.ToBytes()...)
+	case CommandTypePublish:
+		data = append(data, c.Publish.ToBytes()...)
+	case CommandTypeMakeMoveVec:
+		data = append(data, c.MakeMoveVec.ToBytes()...)
+	case CommandTypeUpgrade:
+		data = append(data, c.Upgrade.ToBytes()...)
+	}
+
+	return data
+}
+
 func (c *Command) String() string {
 	fundName := ""
 	switch c.Type {

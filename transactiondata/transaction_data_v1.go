@@ -2,15 +2,24 @@ package transactiondata
 
 type TransactionDataV1 struct {
 	Kind       *TransactionKind
-	Sender     *SuiAddress
+	Sender     SuiAddress
 	GasData    *GasData
 	Expiration *TransactionExpiration
+}
+
+func (c *TransactionDataV1) ToBytes() []byte {
+	var data []byte
+	data = append(data, c.Kind.ToBytes()...)
+	data = append(data, c.Sender.ToBytes()...)
+	data = append(data, c.GasData.ToBytes()...)
+	data = append(data, c.Expiration.ToBytes()...)
+	return data
 }
 
 func (c *TransactionDataV1) Parse(data []byte, offset int) (int, error) {
 	var err error
 	c.Kind = &TransactionKind{}
-	c.Sender = &SuiAddress{}
+	c.Sender = SuiAddress{}
 	c.GasData = &GasData{}
 	c.Expiration = &TransactionExpiration{}
 

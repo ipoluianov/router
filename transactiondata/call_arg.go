@@ -14,6 +14,29 @@ type CallArg struct {
 	Object *ObjectArg
 }
 
+func (c *CallArg) ToBytes() []byte {
+	var data []byte
+
+	// Serialize the type of the argument
+	data = append(data, SerializeULEB128(int(c.Type))...)
+
+	// Serialize the argument
+	switch c.Type {
+	case CallArgTypePure:
+		// Serialize the length of the pure data
+		data = append(data, SerializeULEB128(len(c.Pure))...)
+		// Serialize the pure data
+		data = append(data, c.Pure...)
+	case CallArgTypeObject:
+		// Serialize the object
+		data = append(data, c.Object.ToBytes()...)
+	default:
+		return nil
+	}
+
+	return data
+}
+
 func (c *CallArg) Parse(data []byte, offset int) (int, error) {
 	var err error
 

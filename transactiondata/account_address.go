@@ -2,6 +2,10 @@ package transactiondata
 
 type AccountAddress [32]byte
 
+func (c *AccountAddress) ToBytes() []byte {
+	return c[:]
+}
+
 func (c *AccountAddress) Parse(data []byte, offset int) (int, error) {
 	if len(data) < offset+32 {
 		return 0, ErrNotEnoughData

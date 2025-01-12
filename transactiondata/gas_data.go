@@ -24,6 +24,29 @@ func (c *GasData) String() string {
 	return result
 }
 
+func (c *GasData) ToBytes() []byte {
+	var data []byte
+
+	// Serialize the number of payments
+	data = append(data, SerializeULEB128(len(c.Payment))...)
+
+	// Serialize the payments
+	for _, v := range c.Payment {
+		data = append(data, v.ToBytes()...)
+	}
+
+	// Serialize the owner
+	data = append(data, c.Owner.ToBytes()...)
+
+	// Serialize the price
+	data = append(data, SerializeUint64(c.Price)...)
+
+	// Serialize the budget
+	data = append(data, SerializeUint64(c.Budget)...)
+
+	return data
+}
+
 func (c *GasData) Parse(data []byte, offset int) (int, error) {
 	var numPayments int
 	var err error
