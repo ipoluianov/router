@@ -3,7 +3,7 @@ package transactiondata
 import (
 	"encoding/hex"
 
-	"github.com/ipoluianov/router/utils"
+	"github.com/btcsuite/btcutil/base58"
 )
 
 type ObjectDigest struct {
@@ -22,8 +22,8 @@ func (c *ObjectDigest) ToBytes() []byte {
 	return data
 }
 
-func (c *ObjectDigest) SetHex(hexData string) {
-	bs := utils.ParseHex(hexData)
+func (c *ObjectDigest) SetBase58(base58Data string) {
+	bs := base58.Decode(base58Data)
 	c.Digest = make([]byte, len(bs))
 	copy(c.Digest, bs)
 }

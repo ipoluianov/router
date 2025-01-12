@@ -48,6 +48,7 @@ func (c *TransactionBuilderMoveCall) Build(builder *TransactionBuilder) error {
 			return errors.New("unsupported argument type")
 		}
 	}
+	builder.transactionData.V1.Kind.ProgrammableTransaction.Commands = append(builder.transactionData.V1.Kind.ProgrammableTransaction.Commands, &cmd)
 
 	return nil
 }

@@ -7,7 +7,7 @@ import (
 type ObjectRef struct {
 	ObjectID       ObjectID
 	SequenceNumber SequenceNumber
-	ObjectDigest   *ObjectDigest
+	ObjectDigest   ObjectDigest
 }
 
 func SerializeUint64(i uint64) []byte {
@@ -53,7 +53,7 @@ func (c *ObjectRef) Parse(data []byte, offset int) (int, error) {
 	offset += 8
 
 	// Parse ObjectDigest
-	c.ObjectDigest = &ObjectDigest{}
+	c.ObjectDigest = ObjectDigest{}
 	offset, err = c.ObjectDigest.Parse(data, offset)
 	if err != nil {
 		return 0, err

@@ -1,6 +1,7 @@
 package suisdk
 
 import (
+	"github.com/btcsuite/btcutil/base58"
 	"github.com/ipoluianov/router/transactiondata"
 )
 
@@ -25,7 +26,8 @@ func (c *TransactionBuilder) AddCommand(cmd *TransactionBuilderMoveCall) {
 }
 
 func (c *TransactionBuilder) Build() (string, error) {
-	c.transactionData = transactiondata.NewTransactionDataV1()
+	c.transactionData = transactiondata.NewTransactionData()
+	c.transactionData.V1 = &transactiondata.TransactionDataV1{}
 	senderAddrBS := ParseAddress(c.client.account.Address)
 	c.transactionData.V1.Sender = senderAddrBS
 	c.transactionData.V1.Expiration = transactiondata.NewTransactionExpiration()
@@ -41,7 +43,7 @@ func (c *TransactionBuilder) Build() (string, error) {
 	}
 	var payment transactiondata.ObjectRef
 	payment.ObjectID.SetHex(gasCoinObj.ObjectId)
-	payment.ObjectDigest.SetHex(gasCoinObj.Digest)
+	payment.ObjectDigest.SetBase58(gasCoinObj.Digest)
 	payment.SequenceNumber = transactiondata.SequenceNumber(gasCoinObj.SeqNum)
 	gasData.Payment = append(gasData.Payment, payment)
 	c.transactionData.V1.GasData = &gasData
@@ -54,5 +56,7 @@ func (c *TransactionBuilder) Build() (string, error) {
 		cmd.Build(c)
 	}
 
-	return "", nil
+	bs := c.transactionData.ToBytes()
+
+	return base58.Encode(bs), nil
 }

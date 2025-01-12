@@ -1,12 +1,14 @@
 package suisdk
 
 import (
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
+
+	"github.com/btcsuite/btcutil/base58"
+	"github.com/ipoluianov/router/transactiondata"
 )
 
 type CoinObject struct {
@@ -128,9 +130,21 @@ func (c *Client) ExecMoveCall(params MoveCallParameters) (*TransactionExecutionR
 		return nil, err
 	}
 
-	txBytesBS, _ := base64.StdEncoding.DecodeString(txBytes)
+	//txBytesBS, _ := base64.StdEncoding.DecodeString(txBytes)
+	txBytesBS := base58.Decode(txBytes)
 
 	fmt.Println("TXBYTES:", hex.EncodeToString(txBytesBS))
+
+	trDataParsed := transactiondata.NewTransactionData()
+	_, err = trDataParsed.Parse(txBytesBS, 0)
+	if err != nil {
+		fmt.Println("PARSE ERROR:", err)
+		return nil, err
+	}
+	bsParsed, _ := json.MarshalIndent(trDataParsed, "", "  ")
+	fmt.Println("PARSING SUCCESS:", string(bsParsed))
+
+	return nil, nil
 
 	// Signature
 	txSigned, err := c.account.Signature(txBytes)

@@ -32,6 +32,18 @@ func NewTransactionDataV2() *TransactionData {
 	return &c
 }
 
+func (c *TransactionData) ToBytes() []byte {
+	var data []byte
+	data = append(data, byte(c.Version))
+	switch c.Version {
+	case TransactionDataVersionV1:
+		data = append(data, c.V1.ToBytes()...)
+	case TransactionDataVersionV2:
+		data = append(data, c.V2.ToBytes()...)
+	}
+	return data
+}
+
 func (c *TransactionData) Parse(data []byte, offset int) (int, error) {
 	if len(data) < offset+1 {
 		return 0, ErrNotEnoughData

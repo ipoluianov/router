@@ -34,7 +34,7 @@ func (c *TransactionKind) ToBytes() []byte {
 	var data []byte
 
 	// Serialize the transaction kind
-	data = append(data, SerializeULEB128(int(c.Type))...)
+	data = append(data, SerializeULEB128(int(c.Type))...) // second 0
 
 	// Serialize the transaction data
 	switch c.Type {
