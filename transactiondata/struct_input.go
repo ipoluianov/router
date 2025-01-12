@@ -7,18 +7,6 @@ type StructInput struct {
 	TypeParams []TypeInput
 }
 
-/*
-pub struct StructInput {
-    pub address: AccountAddress,
-    pub module: String,
-    pub name: String,
-    // alias for compatibility with old json serialized data.
-    #[serde(rename = "type_args", alias = "type_params")]
-    pub type_params: Vec<TypeInput>,
-}
-
-*/
-
 func (c *StructInput) Parse(data []byte, offset int) (int, error) {
 	var err error
 	c.Address = AccountAddress{}

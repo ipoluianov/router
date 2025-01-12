@@ -22,37 +22,6 @@ const (
 	TypeInputU256    TypeInputType = 10
 )
 
-/*
-pub enum TypeInput {
-    // alias for compatibility with old json serialized data.
-    #[serde(rename = "bool", alias = "Bool")]
-    Bool,
-    #[serde(rename = "u8", alias = "U8")]
-    U8,
-    #[serde(rename = "u64", alias = "U64")]
-    U64,
-    #[serde(rename = "u128", alias = "U128")]
-    U128,
-    #[serde(rename = "address", alias = "Address")]
-    Address,
-    #[serde(rename = "signer", alias = "Signer")]
-    Signer,
-    #[serde(rename = "vector", alias = "Vector")]
-    Vector(Box<TypeInput>),
-    #[serde(rename = "struct", alias = "Struct")]
-    Struct(Box<StructInput>),
-
-    // NOTE: Added in bytecode version v6, do not reorder!
-    #[serde(rename = "u16", alias = "U16")]
-    U16,
-    #[serde(rename = "u32", alias = "U32")]
-    U32,
-    #[serde(rename = "u256", alias = "U256")]
-    U256,
-}
-
-*/
-
 func (c *TypeInput) Parse(data []byte, offset int) (int, error) {
 	tpInput, offset, err := ParseULEB128(data, offset)
 	if err != nil {

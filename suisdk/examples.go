@@ -60,7 +60,7 @@ func ExampleGetTransactionBlock() {
 	cl := NewClient(MAINNET_URL)
 	var showParams TransactionBlockResponseOptions
 	showParams.ShowRawInput = true
-	dig := "CWYj4F1vW34BwYBVAkFJXKRyoBHhQhenY89g6GvaKjSu"
+	dig := "4iZNLbFtZQ6HjfjoZaTzgrRDg1h4yc91FTDL4SsZ5qYK"
 	b, err := cl.GetTransactionBlock(dig, showParams)
 	if err != nil {
 		fmt.Println("ERROR:", err)

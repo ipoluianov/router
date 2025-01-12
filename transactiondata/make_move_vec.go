@@ -1,5 +1,7 @@
 package transactiondata
 
+// MakeMoveVec(Option<TypeInput>, Vec<Argument>),
+
 type MakeMoveVec struct {
 }
 

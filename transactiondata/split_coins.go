@@ -1,7 +1,5 @@
 package transactiondata
 
-// SplitCoins(Argument, Vec<Argument>),
-
 type SplitCoins struct {
 	Argument  *Argument
 	Arguments []*Argument
